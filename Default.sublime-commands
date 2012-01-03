@@ -1,6 +1,6 @@
 [
-    // {
-    //     "caption": "Command",
-    //     "command": "move_text_left"
-    // }
+    {
+        "caption": "FileDiffs: Menu",
+        "command": "file_diff_menu"
+    }
 ]
