@@ -21,7 +21,8 @@ FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         menu_items = FILE_DIFFS
-        for region in self.view.sel():
+        regions = [region for region in self.view.sel()]
+        for region in regions:
             if not region.empty():
                 menu_items = [f.replace(u'Diff file', u'Diff selection') for f in FILE_DIFFS]
                 break
@@ -43,7 +44,8 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 class FileDiffCommand(sublime_plugin.TextCommand):
     def diff_content(self):
         content = ''
-        for region in self.view.sel():
+        regions = [region for region in self.view.sel()]
+        for region in regions:
             if region.empty():
                 continue
             content += self.view.substr(region)
@@ -105,7 +107,8 @@ class FileDiffClipboardCommand(FileDiffCommand):
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         content = ''
-        for region in self.view.sel():
+        regions = [region for region in self.view.sel()]
+        for region in regions:
             if region.empty():
                 continue
             content += self.view.substr(region)
