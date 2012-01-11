@@ -7,6 +7,10 @@ Show diffs between the current file, or selection(s) in the current file, and cl
 Installation
 ------------
 
+1. Using Package Control, install "FileDiffs"
+
+Or:
+
 1. Open the Sublime Text 2 Packages folder
 
     - OS X: ~/Library/Application Support/Sublime Text 2/Packages/
