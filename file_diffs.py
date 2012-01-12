@@ -10,6 +10,7 @@ from tempfile import mkstemp
 
 
 CLIPBOARD = u'Diff file with Clipboard'
+SELECTIONS = u'Diff Selections'
 SAVED = u'Diff file with Saved'
 FILE = u'Diff file with File in Project…'
 TAB = u'Diff file with Open Tab…'
@@ -21,17 +22,19 @@ FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         menu_items = FILE_DIFFS
-        regions = [region for region in self.view.sel()]
-        for region in regions:
-            if not region.empty():
-                menu_items = [f.replace(u'Diff file', u'Diff selection') for f in FILE_DIFFS]
-                break
+        regions = self.view.sel()
+        if len(regions) == 1 and not regions[0].empty():
+            menu_items = [f.replace(u'Diff file', u'Diff selection') for f in FILE_DIFFS]
+        elif len(regions) == 2:
+            menu_items.insert(1, SELECTIONS)
 
         def on_done(index):
             if index == -1:
                 return
             elif FILE_DIFFS[index] == CLIPBOARD:
                 self.view.run_command('file_diff_clipboard')
+            elif FILE_DIFFS[index] == SELECTIONS:
+                self.view.run_command('file_diff_selections')
             elif FILE_DIFFS[index] == SAVED:
                 self.view.run_command('file_diff_saved')
             elif FILE_DIFFS[index] == FILE:
@@ -101,6 +104,15 @@ class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         current = sublime.get_clipboard()
         diff = self.run_diff(self.diff_content(), current)
+        self.show_diff(diff)
+
+
+class FileDiffSelectionsCommand(FileDiffCommand):
+    def run(self, edit, **kwargs):
+        regions = self.view.sel()
+        current = self.view.substr(regions[0])
+        diff = self.view.substr(regions[1])
+        diff = self.run_diff(current, diff)
         self.show_diff(diff)
 
 

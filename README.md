@@ -1,7 +1,7 @@
 FileDiffs Plugin for Sublime Text 2
 ===================================
 
-Show diffs between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.
+Show diffs between the current file (or selection(s) in the current file) with the clipboard, another file, or unsaved changes.
 
 
 Installation
@@ -27,6 +27,8 @@ Commands
 The rest of the commands are not bound by default:
 
 `file_diff_clipboard`: Shows the diff of the current file or selection(s) and the clipboard (the clipboard is considered the "new" file unless `reverse` is True)
+
+`file_diff_selections`: Shows the diff of the first and second selected regions.  The file_diff_menu command checks for exactly two regions selected, otherwise it doesn't display this command.
 
 `file_diff_saved`: Shows the diff of the current file or selection(s) and the saved file.
 
