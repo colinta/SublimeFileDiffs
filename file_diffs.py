@@ -21,25 +21,31 @@ FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        menu_items = FILE_DIFFS
+        menu_items = FILE_DIFFS[:]
+        saved = SAVED
         regions = self.view.sel()
-        if len(regions) == 1 and not regions[0].empty():
-            menu_items = [f.replace(u'Diff file', u'Diff selection') for f in FILE_DIFFS]
+        if len([region for region in regions if not region.empty()]):
+            menu_items = [f.replace(u'Diff file', u'Diff selection') for f in menu_items]
+            saved = saved.replace(u'Diff file', u'Diff selection')
         elif len(regions) == 2:
             menu_items.insert(1, SELECTIONS)
 
+        if not self.view.file_name():
+            menu_items.remove(saved)
+
         def on_done(index):
+            restored_menu_items = [f.replace(u'Diff selection', u'Diff file') for f in menu_items]
             if index == -1:
                 return
-            elif FILE_DIFFS[index] == CLIPBOARD:
+            elif restored_menu_items[index] == CLIPBOARD:
                 self.view.run_command('file_diff_clipboard')
-            elif FILE_DIFFS[index] == SELECTIONS:
+            elif restored_menu_items[index] == SELECTIONS:
                 self.view.run_command('file_diff_selections')
-            elif FILE_DIFFS[index] == SAVED:
+            elif restored_menu_items[index] == SAVED:
                 self.view.run_command('file_diff_saved')
-            elif FILE_DIFFS[index] == FILE:
+            elif restored_menu_items[index] == FILE:
                 self.view.run_command('file_diff_file')
-            elif FILE_DIFFS[index] == TAB:
+            elif restored_menu_items[index] == TAB:
                 self.view.run_command('file_diff_tab')
         self.view.window().show_quick_panel(menu_items, on_done)
 
@@ -47,13 +53,18 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 class FileDiffCommand(sublime_plugin.TextCommand):
     def diff_content(self):
         content = ''
+
         regions = [region for region in self.view.sel()]
         for region in regions:
             if region.empty():
                 continue
             content += self.view.substr(region)
+
         if not content:
-            content = self.view.file_name()
+            if self.view.file_name() and not self.view.is_dirty():
+                content = self.view.file_name()
+            else:
+                content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
     def run_diff(self, a, b):
@@ -61,23 +72,27 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         b = b.encode('utf-8')
 
         delete = []
-        if not os.path.exists(a):
-            prefix, suffix = os.path.splitext(self.view.file_name())
-            prefix += '_'
-            fd, path = mkstemp(suffix, prefix)
-            os.write(fd, a)
-            os.close(fd)
-            delete.append(path)
-            a = path
+        if not os.path.exists(a) or not os.path.exists(b):
+            if self.view.file_name():
+                prefix, suffix = os.path.splitext(self.view.file_name())
+                prefix += '_'
+            else:
+                prefix = 'unsaved_'
+                suffix = '.tmp'
 
-        if not os.path.exists(b):
-            prefix, suffix = os.path.splitext(self.view.file_name())
-            prefix += '_'
-            fd, path = mkstemp(suffix, prefix)
-            os.write(fd, b)
-            os.close(fd)
-            delete.append(path)
-            b = path
+            if not os.path.exists(a):
+                fd, path = mkstemp(suffix, prefix)
+                os.write(fd, a)
+                os.close(fd)
+                delete.append(path)
+                a = path
+
+            if not os.path.exists(b):
+                fd, path = mkstemp(suffix, prefix)
+                os.write(fd, b)
+                os.close(fd)
+                delete.append(path)
+                b = path
 
         p = subprocess.Popen(['diff', '-wru', a, b], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         diff = p.stdout.read()
@@ -181,13 +196,32 @@ class FileDiffFileCommand(FileDiffCommand):
 
 class FileDiffTabCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        my_file = self.view.file_name()
-        files = [v.file_name() for v in self.view.window().views() if v.file_name() != my_file]
+        my_id = self.view.id()
+        files = []
+        contents = []
+        untitled_count = 1
+        for v in self.view.window().views():
+            if v.id() != my_id:
+                this_content = ''
+                if v.file_name():
+                    files.append(v.file_name())
+                    if not v.is_dirty():
+                        this_content = v.file_name()
+                elif v.name():
+                    files.append(v.name())
+                else:
+                    files.append('untitled %d' % untitled_count)
+                    untitled_count += 1
+
+                if not this_content:
+                    this_content = v.substr(sublime.Region(0, v.size()))
+                contents.append(this_content)
 
         def on_done(index):
             if index > -1:
-                diff = self.run_diff(self.diff_content(), files[index])
+                diff = self.run_diff(self.diff_content(), contents[index])
                 self.show_diff(diff)
+
         if len(files) == 1:
             on_done(0)
         else:
