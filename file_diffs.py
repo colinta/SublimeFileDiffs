@@ -2,11 +2,11 @@
 
 import sublime
 import sublime_plugin
-import subprocess
+import difflib
 
 import os
 from fnmatch import fnmatch
-from tempfile import mkstemp
+import codecs
 
 
 CLIPBOARD = u'Diff file with Clipboard'
@@ -68,51 +68,46 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return content
 
     def run_diff(self, a, b):
-        a = a.encode('utf-8')
-        b = b.encode('utf-8')
+        from_content = a
+        from_file = None
 
-        delete = []
-        if not os.path.exists(a) or not os.path.exists(b):
-            if self.view.file_name():
-                prefix, suffix = os.path.splitext(self.view.file_name())
-                prefix += '_'
-            else:
-                prefix = 'unsaved_'
-                suffix = '.tmp'
+        to_content = b
+        to_file = None
 
-            if not os.path.exists(a):
-                fd, path = mkstemp(suffix, prefix)
-                os.write(fd, a)
-                os.close(fd)
-                delete.append(path)
-                a = path
+        if os.path.exists(a):
+            from_file = a
+            with codecs.open(from_file, mode='U', encoding='utf-8') as f:
+                from_content = f.readlines()
+        else:
+            from_content = a.splitlines(True)
+            from_file = 'from_file'
 
-            if not os.path.exists(b):
-                fd, path = mkstemp(suffix, prefix)
-                os.write(fd, b)
-                os.close(fd)
-                delete.append(path)
-                b = path
+        if os.path.exists(b):
+            to_file = b
+            with codecs.open(to_file, mode='U', encoding='utf-8') as f:
+                to_content = f.readlines()
+        else:
+            to_content = b.splitlines(True)
+            to_file = 'to_file'
 
-        p = subprocess.Popen(['diff', '-wru', a, b], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        diff = p.stdout.read()
-        diff = unicode(diff, 'utf-8')
+        diff = difflib.unified_diff(from_content, to_content, from_file, to_file)
 
-        for path in delete:
-            os.remove(path)
-
-        return diff
+        return ''.join(diff)
 
     def show_diff(self, diff):
-        if diff == '':
-            sublime.status_message('No Difference')
-        else:
+        if diff:
             panel = self.view.window().new_file()
             panel.set_scratch(True)
             panel.set_syntax_file('Packages/Diff/Diff.tmLanguage')
             panel_edit = panel.begin_edit('file_diffs')
             panel.insert(panel_edit, 0, diff)
+            # cursor = 0
+            # for line in diff:
+            #     panel.insert(panel_edit, cursor, line)
+            #     cursor += len(line)
             panel.end_edit(panel_edit)
+        else:
+            sublime.status_message('No Difference')
 
 
 class FileDiffClipboardCommand(FileDiffCommand):
