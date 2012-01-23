@@ -61,10 +61,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content += self.view.substr(region)
 
         if not content:
-            if self.view.file_name() and not self.view.is_dirty():
-                content = self.view.file_name()
-            else:
-                content = self.view.substr(sublime.Region(0, self.view.size()))
+            content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
     def run_diff(self, a, b):
@@ -197,19 +194,15 @@ class FileDiffTabCommand(FileDiffCommand):
         untitled_count = 1
         for v in self.view.window().views():
             if v.id() != my_id:
-                this_content = ''
+                this_content = v.substr(sublime.Region(0, v.size()))
                 if v.file_name():
                     files.append(v.file_name())
-                    if not v.is_dirty():
-                        this_content = v.file_name()
                 elif v.name():
                     files.append(v.name())
                 else:
                     files.append('untitled %d' % untitled_count)
                     untitled_count += 1
 
-                if not this_content:
-                    this_content = v.substr(sublime.Region(0, v.size()))
                 contents.append(this_content)
 
         def on_done(index):
