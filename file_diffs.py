@@ -30,7 +30,7 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
             menu_items = [f.replace(u'Diff file', u'Diff selection') for f in menu_items]
             saved = saved.replace(u'Diff file', u'Diff selection')
 
-        if not self.view.file_name():
+        if not (self.view.file_name() and self.view.is_dirty()):
             menu_items.remove(saved)
 
         def on_done(index):
