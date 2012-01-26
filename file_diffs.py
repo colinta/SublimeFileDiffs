@@ -173,8 +173,11 @@ class FileDiffFileCommand(FileDiffCommand):
 
         ret = []
         for folder in folders:
+            if not os.path.isdir(folder):
+                continue
+
             for file in os.listdir(folder):
-                fullpath = folder + '/' + file
+                fullpath = os.path.join(folder, file)
                 if os.path.isdir(fullpath):
                     # excluded folder?
                     if not len([True for pattern in folder_exclude_patterns if fnmatch(file, pattern)]):
