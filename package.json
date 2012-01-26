@@ -1,0 +1,7 @@
+{
+  "repo": "SublimeFileDiffs",
+  "name": "FileDiffs",
+  "description": "Show diffs between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.",
+  "author": "Colin Thomas-Arnold (colinta)",
+  "homepage": "https://github.com/colinta/SublimeFileDiffs"
+}
