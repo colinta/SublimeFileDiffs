@@ -1,0 +1,8 @@
+[
+   { "caption": "-" },
+   { "caption": "FileDiffs Menu", "command": "file_diff_menu" },
+   { "caption": "Diff Selections", "command": "file_diff_selections" },
+   { "caption": "Diff with Clipboard", "command": "file_diff_clipboard" },
+   { "caption": "Diff with Saved", "command": "file_diff_saved" },
+   { "caption": "-" }
+]

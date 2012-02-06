@@ -1,0 +1,6 @@
+[
+   { "caption": "-" },
+   { "caption": "FileDiffs Menu", "command": "file_diff_menu" },
+   { "caption": "Diff with Tab…", "command": "file_diff_tab" },
+   { "caption": "-" }
+]

@@ -1,0 +1,6 @@
+[
+   { "caption": "-" },
+   { "caption": "FileDiffs Menu", "command": "file_diff_menu" },
+   { "caption": "Diff with File in Project…", "command": "file_diff_file" },
+   { "caption": "-" }
+]
