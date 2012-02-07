@@ -1,10 +1,11 @@
 # coding: utf8
+import os
+import re
 
 import sublime
 import sublime_plugin
 import difflib
 
-import os
 from fnmatch import fnmatch
 import codecs
 
@@ -119,8 +120,41 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         regions = self.view.sel()
         current = self.view.substr(regions[0])
         diff = self.view.substr(regions[1])
-        diff = self.run_diff(current, diff)
-        self.show_diff(diff)
+
+        # trim off indent
+        indent = None
+        for line in current.splitlines():
+            new_indent = re.match('[ \t]*', line).group(0)
+            if new_indent == '':
+                continue
+
+            if indent is None:
+                indent = new_indent
+            elif len(new_indent) < len(indent):
+                indent = new_indent
+
+            if not indent:
+                break
+
+        if indent:
+            current = u"\n".join(line[len(indent):] for line in current.splitlines())
+
+        # trim off indent
+        indent = None
+        for line in diff.splitlines():
+            new_indent = re.match('[ \t]*', line).group(0)
+            if new_indent == '':
+                continue
+
+            if indent is None:
+                indent = new_indent
+            elif len(new_indent) < len(indent):
+                indent = new_indent
+
+        if indent:
+            diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
+
+        self.show_diff(self.run_diff(current, diff))
 
 
 class FileDiffSavedCommand(FileDiffCommand):
