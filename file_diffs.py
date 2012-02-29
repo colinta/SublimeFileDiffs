@@ -65,28 +65,29 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
-    def run_diff(self, a, b):
+    def run_diff(self, a, b, from_file=None, to_file=None):
         from_content = a
-        from_file = None
-
         to_content = b
-        to_file = None
 
         if os.path.exists(a):
-            from_file = a
+            if from_file is None:
+                from_file = a
             with codecs.open(from_file, mode='U', encoding='utf-8') as f:
                 from_content = f.readlines()
         else:
             from_content = a.splitlines(True)
-            from_file = 'from_file'
+            if from_file is None:
+                from_file = 'from_file'
 
         if os.path.exists(b):
-            to_file = b
+            if to_file is None:
+                to_file = b
             with codecs.open(to_file, mode='U', encoding='utf-8') as f:
                 to_content = f.readlines()
         else:
             to_content = b.splitlines(True)
-            to_file = 'to_file'
+            if to_file is None:
+                to_file = 'to_file'
 
         diff = difflib.unified_diff(from_content, to_content, from_file, to_file)
 
@@ -111,7 +112,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         current = sublime.get_clipboard()
-        diff = self.run_diff(self.diff_content(), current)
+        diff = self.run_diff(self.diff_content(), current,
+            from_file=self.view.file_name(),
+            to_file='(clipboard)')
         self.show_diff(diff)
 
 
@@ -154,7 +157,9 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         if indent:
             diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
 
-        self.show_diff(self.run_diff(current, diff))
+        self.show_diff(self.run_diff(current, diff),
+            from_file='first selection',
+            to_file='second selection')
 
 
 class FileDiffSavedCommand(FileDiffCommand):
@@ -168,7 +173,9 @@ class FileDiffSavedCommand(FileDiffCommand):
         if not content:
             content = self.view.substr(sublime.Region(0, self.view.size()))
 
-        diff = self.run_diff(self.view.file_name(), content)
+        diff = self.run_diff(self.view.file_name(), content,
+            from_file=self.view.file_name(),
+            to_file=self.view.file_name() + u' (Unsaved)')
         self.show_diff(diff)
 
 
@@ -194,7 +201,8 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diff = self.run_diff(self.diff_content(), files[index])
+                diff = self.run_diff(self.diff_content(), files[index],
+                    from_file=self.view.file_name())
                 self.show_diff(diff)
         self.view.window().show_quick_panel(file_picker, on_done)
 
@@ -244,7 +252,9 @@ class FileDiffTabCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diff = self.run_diff(self.diff_content(), contents[index])
+                diff = self.run_diff(self.diff_content(), contents[index],
+                    from_file=self.view.file_name(),
+                    to_file=files[index])
                 self.show_diff(diff)
 
         if len(files) == 1:
