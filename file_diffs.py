@@ -157,9 +157,9 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         if indent:
             diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
 
-        self.show_diff(self.run_diff(current, diff),
+        self.show_diff(self.run_diff(current, diff,
             from_file='first selection',
-            to_file='second selection')
+            to_file='second selection'))
 
 
 class FileDiffSavedCommand(FileDiffCommand):
