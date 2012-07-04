@@ -18,6 +18,7 @@ Or:
     - Linux: ~/.Sublime Text 2/Packages/
 
 2. clone this repo
+3. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
 
 Commands
 --------
