@@ -89,22 +89,18 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if to_file is None:
                 to_file = 'to_file'
 
-        diff = difflib.unified_diff(from_content, to_content, from_file, to_file)
+        diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
-        return ''.join(diff)
+        return diffs
 
-    def show_diff(self, diff):
-        if diff:
-            panel = self.view.window().new_file()
-            panel.set_scratch(True)
-            panel.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-            panel_edit = panel.begin_edit('file_diffs')
-            panel.insert(panel_edit, 0, diff)
-            # cursor = 0
-            # for line in diff:
-            #     panel.insert(panel_edit, cursor, line)
-            #     cursor += len(line)
-            panel.end_edit(panel_edit)
+    def show_diff(self, diffs):
+        if diffs:
+            scratch = self.view.window().new_file()
+            scratch.set_scratch(True)
+            scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
+            scratch_edit = scratch.begin_edit('file_diffs')
+            scratch.insert(scratch_edit, 0, ''.join(diffs))
+            scratch.end_edit(scratch_edit)
         else:
             sublime.status_message('No Difference')
 
@@ -112,10 +108,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         current = sublime.get_clipboard()
-        diff = self.run_diff(self.diff_content(), current,
+        diffs = self.run_diff(self.diff_content(), current,
             from_file=self.view.file_name(),
             to_file='(clipboard)')
-        self.show_diff(diff)
+        self.show_diff(diffs)
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -173,10 +169,10 @@ class FileDiffSavedCommand(FileDiffCommand):
         if not content:
             content = self.view.substr(sublime.Region(0, self.view.size()))
 
-        diff = self.run_diff(self.view.file_name(), content,
+        diffs = self.run_diff(self.view.file_name(), content,
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)')
-        self.show_diff(diff)
+        self.show_diff(diffs)
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -201,9 +197,9 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diff = self.run_diff(self.diff_content(), files[index],
+                diffs = self.run_diff(self.diff_content(), files[index],
                     from_file=self.view.file_name())
-                self.show_diff(diff)
+                self.show_diff(diffs)
         self.view.window().show_quick_panel(file_picker, on_done)
 
     def find_files(self, folders):
@@ -252,10 +248,10 @@ class FileDiffTabCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diff = self.run_diff(self.diff_content(), contents[index],
+                diffs = self.run_diff(self.diff_content(), contents[index],
                     from_file=self.view.file_name(),
                     to_file=files[index])
-                self.show_diff(diff)
+                self.show_diff(diffs)
 
         if len(files) == 1:
             on_done(0)
