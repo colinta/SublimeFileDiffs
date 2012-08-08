@@ -1,7 +1,7 @@
 FileDiffs Plugin for Sublime Text 2
 ===================================
 
-Show diffs between the current file (or selection(s) in the current file) with the clipboard, another file, or unsaved changes.
+Shows diffs - also in an external diff tool - between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.
 
 
 Installation
@@ -19,6 +19,14 @@ Or:
 
 2. clone this repo
 3. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
+
+4. To add an external diff tool:
+
+    - Preferences
+    - Package Settings
+    - FileDiffs
+    - Settings - Default
+
 
 Commands
 --------
