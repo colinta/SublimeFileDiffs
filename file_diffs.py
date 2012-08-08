@@ -9,6 +9,7 @@ import difflib
 from fnmatch import fnmatch
 import codecs
 
+SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
 
 CLIPBOARD = u'Diff file with Clipboard'
 SELECTIONS = u'Diff Selections'
@@ -91,7 +92,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
+        FileDiffCommand.diff_with_external(self, a, b, from_file, to_file)
         return diffs
+
+    def diff_with_external(self, a, b, from_file=None, to_file=None):
+        if os.path.exists(from_file) and os.path.exists(to_file):
+            command = SETTINGS.get('cmd')
+            if command is not None:
+                command = [c.replace(u'$file1', from_file) for c in command]
+                command = [c.replace(u'$file2', to_file) for c in command]
+                self.view.window().run_command("exec", {"cmd": command})
 
     def show_diff(self, diffs):
         if diffs:
