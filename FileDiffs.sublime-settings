@@ -1,0 +1,12 @@
+{
+
+	// just uncomment one of the examples
+	// or write your own command
+
+  // opendiff (FileMerge)
+  //"cmd": ["opendiff", "$file1", "$file2"]
+
+	// ksdiff (Kaleidoscope)
+	//"cmd": ["ksdiff", "$file1", "$file2"]
+
+}
