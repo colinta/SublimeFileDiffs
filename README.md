@@ -20,12 +20,12 @@ Or:
 2. clone this repo
 3. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
 
-4. To add an external diff tool:
+Add External Diff Tool
+--------
 
-    - Preferences
-    - Package Settings
-    - FileDiffs
-    - Settings - Default
+1. Preferences > Package Settings > FileDiffs > Settings - Default
+
+2. Uncomment one of the examples or write you own command to open external diff tool.
 
 
 Commands
