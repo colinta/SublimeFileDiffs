@@ -23,6 +23,8 @@ Or:
 Add External Diff Tool
 --------
 
+(IMPORTANT: Dont forget to make a correct symlink (e.g. in /usr/bin) pointing to the command line tool of your external diff tool)
+
 1. Preferences > Package Settings > FileDiffs > Settings - Default
 
 2. Uncomment one of the examples or write you own command to open external diff tool.
