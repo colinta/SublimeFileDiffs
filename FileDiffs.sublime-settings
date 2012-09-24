@@ -1,12 +1,22 @@
-{
+//You can set a command like this
+//"cmd": ["command", "$file1", "$file2"]
 
+//You can also include other command line parameters like this
+//"cmd": ["command", "-parameter1", "-parameter2", "$file1", "$file2"]
+
+{
 	// just uncomment one of the examples
 	// or write your own command
 
-  // opendiff (FileMerge)
-  //"cmd": ["opendiff", "$file1", "$file2"]
+	// opendiff (FileMerge)
+	//"cmd": ["opendiff", "$file1", "$file2"]
 
 	// ksdiff (Kaleidoscope)
 	//"cmd": ["ksdiff", "$file1", "$file2"]
 
+	//twdiff (Textwrangler)
+	//"cmd": ["twdiff", "$file1", "$file2"]
+
+	//deltawalker (DeltaWalker)
+	//"cmd": ["deltawalker", "-nosplash", "$file1", "$file2"]
 }
