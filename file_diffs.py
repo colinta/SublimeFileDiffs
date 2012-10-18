@@ -20,6 +20,7 @@ TAB = u'Diff file with Open Tab…'
 
 FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 
+
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         menu_items = FILE_DIFFS[:]
@@ -67,7 +68,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def run_diff(self, a, b, from_file=None, to_file=None):
         from_content = a
-        to_content = b   
+        to_content = b
 
         if os.path.exists(a):
             if from_file is None:
@@ -111,11 +112,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 command = [c.replace(u'$file2', to_file) for c in command]
                 self.view.window().run_command("exec", {"cmd": command})
 
-
     def show_diff(self, diffs):
         if diffs:
-            command = SETTINGS.get('open_in_sublime')                
-            if command is None or command is True:        
+            command = SETTINGS.get('open_in_sublime')
+            if command is None or command is True:
                 scratch = self.view.window().new_file()
                 scratch.set_scratch(True)
                 scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
