@@ -92,38 +92,53 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
-        FileDiffCommand.diff_with_external(self, a, b, from_file, to_file)
-        return diffs
+        open_in_sublime = SETTINGS.get('open_in_sublime', True)
+        external_command = SETTINGS.get('cmd')
+        if not diffs:
+            sublime.status_message('No Difference')
+        else:
+            if external_command:
+                self.diff_with_external(a, b, from_file, to_file)
+
+            if open_in_sublime:
+                self.diff_in_sublime(diffs)
 
     def diff_with_external(self, a, b, from_file=None, to_file=None):
-        if os.path.exists(from_file):
+        try:
+            if not os.path.exists(from_file):
+                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                from_file = tmp_file.name
+                tmp_file.close()
+
+                with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
+                    tmp_file.write(a)
+
             if not os.path.exists(to_file):
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
 
-                tmp_file = codecs.open(to_file, encoding='utf-8', mode='w+')
-                tmp_file.write(b)
-                tmp_file.close()
+                with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
+                    tmp_file.write(b)
 
-            command = SETTINGS.get('cmd')
-            if command is not None:
-                command = [c.replace(u'$file1', from_file) for c in command]
-                command = [c.replace(u'$file2', to_file) for c in command]
-                self.view.window().run_command("exec", {"cmd": command})
+            if os.path.exists(from_file):
+                command = SETTINGS.get('cmd')
+                if command is not None:
+                    command = [c.replace(u'$file1', from_file) for c in command]
+                    command = [c.replace(u'$file2', to_file) for c in command]
+                    self.view.window().run_command("exec", {"cmd": command})
+        except Exception as e:
+            # some basic logging here, since we are cluttering the /tmp folder
+            print repr(e)
+            sublime.status_message(str(e))
 
-    def show_diff(self, diffs):
-        if diffs:
-            command = SETTINGS.get('open_in_sublime')
-            if command is None or command is True:
-                scratch = self.view.window().new_file()
-                scratch.set_scratch(True)
-                scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-                scratch_edit = scratch.begin_edit('file_diffs')
-                scratch.insert(scratch_edit, 0, ''.join(diffs))
-                scratch.end_edit(scratch_edit)
-        else:
-            sublime.status_message('No Difference')
+    def diff_in_sublime(self, diffs):
+        scratch = self.view.window().new_file()
+        scratch.set_scratch(True)
+        scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
+        scratch_edit = scratch.begin_edit('file_diffs')
+        scratch.insert(scratch_edit, 0, ''.join(diffs))
+        scratch.end_edit(scratch_edit)
 
 
 class FileDiffClipboardCommand(FileDiffCommand):
