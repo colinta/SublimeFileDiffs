@@ -2,6 +2,6 @@
   "repo": "SublimeFileDiffs",
   "name": "FileDiffs",
   "description": "Shows diffs - also in an external diff tool - between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.",
-  "author": "Colin Thomas-Arnold (colinta), Sebastian Pape (spape)",
+  "author": "Colin Thomas-Arnold (colinta), Sebastian Pape (spape), Jiri Urban (jiriurban)",
   "homepage": "https://github.com/spape/SublimeFileDiffs"
 }
