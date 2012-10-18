@@ -98,13 +98,13 @@ class FileDiffCommand(sublime_plugin.TextCommand):
     def diff_with_external(self, a, b, from_file=None, to_file=None):
         if os.path.exists(from_file):
             if not os.path.exists(to_file):
-                tmpFile = tempfile.NamedTemporaryFile(delete=False)
-                to_file = tmpFile.name
-                tmpFile.close()
+                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                to_file = tmp_file.name
+                tmp_file.close()
 
-                tmpFile = codecs.open(to_file, encoding='utf-8', mode='w+')
-                tmpFile.write(b)
-                tmpFile.close()
+                tmp_file = codecs.open(to_file, encoding='utf-8', mode='w+')
+                tmp_file.write(b)
+                tmp_file.close()
 
             command = SETTINGS.get('cmd')
             if command is not None:
