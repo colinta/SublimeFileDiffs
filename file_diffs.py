@@ -5,6 +5,7 @@ import re
 import sublime
 import sublime_plugin
 import difflib
+import tempfile
 
 from fnmatch import fnmatch
 import codecs
@@ -17,9 +18,7 @@ SAVED = u'Diff file with Saved'
 FILE = u'Diff file with File in Project…'
 TAB = u'Diff file with Open Tab…'
 
-
 FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
-
 
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def run(self, edit):
@@ -68,7 +67,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def run_diff(self, a, b, from_file=None, to_file=None):
         from_content = a
-        to_content = b
+        to_content = b   
 
         if os.path.exists(a):
             if from_file is None:
@@ -96,21 +95,33 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return diffs
 
     def diff_with_external(self, a, b, from_file=None, to_file=None):
-        if os.path.exists(from_file) and os.path.exists(to_file):
+        if os.path.exists(from_file):
+            if not os.path.exists(to_file):
+                tmpFile = tempfile.NamedTemporaryFile(delete=False)
+                to_file = tmpFile.name
+                tmpFile.close()
+
+                tmpFile = codecs.open(to_file, encoding='utf-8', mode='w+')
+                tmpFile.write(b)
+                tmpFile.close()
+
             command = SETTINGS.get('cmd')
             if command is not None:
                 command = [c.replace(u'$file1', from_file) for c in command]
                 command = [c.replace(u'$file2', to_file) for c in command]
                 self.view.window().run_command("exec", {"cmd": command})
 
+
     def show_diff(self, diffs):
         if diffs:
-            scratch = self.view.window().new_file()
-            scratch.set_scratch(True)
-            scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-            scratch_edit = scratch.begin_edit('file_diffs')
-            scratch.insert(scratch_edit, 0, ''.join(diffs))
-            scratch.end_edit(scratch_edit)
+            command = SETTINGS.get('open_in_sublime')                
+            if command is None or command is True:        
+                scratch = self.view.window().new_file()
+                scratch.set_scratch(True)
+                scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
+                scratch_edit = scratch.begin_edit('file_diffs')
+                scratch.insert(scratch_edit, 0, ''.join(diffs))
+                scratch.end_edit(scratch_edit)
         else:
             sublime.status_message('No Difference')
 
