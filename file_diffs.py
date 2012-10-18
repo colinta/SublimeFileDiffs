@@ -129,10 +129,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         current = sublime.get_clipboard()
-        diffs = self.run_diff(self.diff_content(), current,
+        self.run_diff(self.diff_content(), current,
             from_file=self.view.file_name(),
             to_file='(clipboard)')
-        self.show_diff(diffs)
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -174,9 +173,9 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         if indent:
             diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
 
-        self.show_diff(self.run_diff(current, diff,
+        self.run_diff(current, diff,
             from_file='first selection',
-            to_file='second selection'))
+            to_file='second selection')
 
 
 class FileDiffSavedCommand(FileDiffCommand):
@@ -190,10 +189,9 @@ class FileDiffSavedCommand(FileDiffCommand):
         if not content:
             content = self.view.substr(sublime.Region(0, self.view.size()))
 
-        diffs = self.run_diff(self.view.file_name(), content,
+        self.run_diff(self.view.file_name(), content,
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)')
-        self.show_diff(diffs)
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -218,9 +216,8 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diffs = self.run_diff(self.diff_content(), files[index],
+                self.run_diff(self.diff_content(), files[index],
                     from_file=self.view.file_name())
-                self.show_diff(diffs)
         self.view.window().show_quick_panel(file_picker, on_done)
 
     def find_files(self, folders):
@@ -269,10 +266,9 @@ class FileDiffTabCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                diffs = self.run_diff(self.diff_content(), contents[index],
+                self.run_diff(self.diff_content(), contents[index],
                     from_file=self.view.file_name(),
                     to_file=files[index])
-                self.show_diff(diffs)
 
         if len(files) == 1:
             on_done(0)
