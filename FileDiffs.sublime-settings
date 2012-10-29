@@ -7,6 +7,8 @@
 {
 	// just uncomment one of the examples
 	// or write your own command
+	// NOTE: Copy/paste example below or write your own command in: Package Settings --> FileDiffs --> Settings - User
+	// This file will be overwritten if the package is updated.
 
 	// opendiff (FileMerge)
 	//"cmd": ["opendiff", "$file1", "$file2"]
@@ -16,6 +18,12 @@
 
 	//twdiff (Textwrangler)
 	//"cmd": ["twdiff", "$file1", "$file2"]
+
+	//bbdiff (BBEdit) NOTE: Use example below if you receive error. 
+	//"cmd": ["bbdiff", "$file1", "$file2"]
+
+	//bbdiff (BBEdit)
+	//"cmd" ["/usr/local/bin/bbdiff", "$file1", "$file2"]
 
 	//deltawalker (DeltaWalker)
 	//"cmd": ["deltawalker", "-nosplash", "$file1", "$file2"]
