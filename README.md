@@ -15,7 +15,7 @@ Or:
 
     - OS X: ~/Library/Application Support/Sublime Text 2/Packages/
     - Windows: %APPDATA%/Sublime Text 2/Packages/
-    - Linux: ~/.Sublime Text 2/Packages/
+    - Linux: ~/.Sublime Text 2/Packages/ or ~/.config/sublime-text-2/Packages
 
 2. clone this repo
 3. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
