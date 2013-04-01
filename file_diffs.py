@@ -101,6 +101,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 self.diff_with_external(a, b, from_file, to_file)
 
             if open_in_sublime:
+                # fix diffs
+                diffs = map(lambda line: (line and line[-1] == "\n") and line or line + "\n", diffs)
                 self.diff_in_sublime(diffs)
 
     def diff_with_external(self, a, b, from_file=None, to_file=None):
