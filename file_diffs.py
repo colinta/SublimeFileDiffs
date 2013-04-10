@@ -133,12 +133,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             sublime.status_message(str(e))
 
     def diff_in_sublime(self, diffs):
+        diffs = ''.join(diffs)
         scratch = self.view.window().new_file()
         scratch.set_scratch(True)
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-        scratch_edit = scratch.begin_edit('file_diffs')
-        scratch.insert(scratch_edit, 0, ''.join(diffs))
-        scratch.end_edit(scratch_edit)
+        scratch.run_command('file_diff_dummy1', {'content': diffs})
+
+
+class FileDiffDummy1Command(sublime_plugin.TextCommand):
+    def run(self, edit, content):
+        self.view.insert(edit, 0, content)
 
 
 class FileDiffClipboardCommand(FileDiffCommand):
@@ -232,7 +236,7 @@ class FileDiffFileCommand(FileDiffCommand):
             if index > -1:
                 self.run_diff(self.diff_content(), files[index],
                     from_file=self.view.file_name())
-        self.view.window().show_quick_panel(file_picker, on_done)
+        sublime.set_timeout(lambda: self.view.window().show_quick_panel(file_picker, on_done), 1)
 
     def find_files(self, folders):
         # Cannot access these settings!!  WHY!?
@@ -288,4 +292,4 @@ class FileDiffTabCommand(FileDiffCommand):
             on_done(0)
         else:
             menu_items = [os.path.basename(f) for f in files]
-            self.view.window().show_quick_panel(menu_items, on_done)
+            sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
