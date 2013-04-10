@@ -56,8 +56,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
     def diff_content(self):
         content = ''
 
-        regions = [region for region in self.view.sel()]
-        for region in regions:
+        for region in self.view.sel():
             if region.empty():
                 continue
             content += self.view.substr(region)
@@ -197,8 +196,7 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         content = ''
-        regions = [region for region in self.view.sel()]
-        for region in regions:
+        for region in self.view.sel():
             if region.empty():
                 continue
             content += self.view.substr(region)
