@@ -131,7 +131,6 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     self.view.window().run_command("exec", {"cmd": command})
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
-            print repr(e)
             sublime.status_message(str(e))
 
     def diff_in_sublime(self, diffs):
