@@ -6,7 +6,7 @@
   "labels": ["diff/merge"],
   "releases": [
     {
-      "details": "https://github.com/colinta/SublimeFileDiffs/tree/master",
+      "details": "https://github.com/colinta/SublimeFileDiffs/tree/st2",
       "sublime_text": "<3000"
     },
     {
