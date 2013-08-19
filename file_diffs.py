@@ -24,7 +24,7 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         menu_items = self.FILE_DIFFS[:]
-        saved = SAVED
+        saved = self.SAVED
         non_empty_regions = [region for region in self.view.sel() if not region.empty()]
         if len(non_empty_regions) == 2:
             menu_items.insert(1, SELECTIONS)
