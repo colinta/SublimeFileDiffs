@@ -10,20 +10,20 @@ import tempfile
 from fnmatch import fnmatch
 import codecs
 
-SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
-
-CLIPBOARD = u'Diff file with Clipboard'
-SELECTIONS = u'Diff Selections'
-SAVED = u'Diff file with Saved'
-FILE = u'Diff file with File in Project…'
-TAB = u'Diff file with Open Tab…'
-
-FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
-
-
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
+    CLIPBOARD = 'Diff file with Clipboard'
+    SELECTIONS = 'Diff Selections'
+    SAVED = 'Diff file with Saved'
+    FILE = 'Diff file with File in Project…'
+    TAB = 'Diff file with Open Tab…'
+
+    FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
+
+    def settings(self):
+        return sublime.load_settings('FileDiffs.sublime-settings')
+
     def run(self, edit):
-        menu_items = FILE_DIFFS[:]
+        menu_items = self.FILE_DIFFS[:]
         saved = SAVED
         non_empty_regions = [region for region in self.view.sel() if not region.empty()]
         if len(non_empty_regions) == 2:
@@ -39,20 +39,23 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
             restored_menu_items = [f.replace(u'Diff selection', u'Diff file') for f in menu_items]
             if index == -1:
                 return
-            elif restored_menu_items[index] == CLIPBOARD:
+            elif restored_menu_items[index] == self.CLIPBOARD:
                 self.view.run_command('file_diff_clipboard')
-            elif restored_menu_items[index] == SELECTIONS:
+            elif restored_menu_items[index] == self.SELECTIONS:
                 self.view.run_command('file_diff_selections')
-            elif restored_menu_items[index] == SAVED:
+            elif restored_menu_items[index] == self.SAVED:
                 self.view.run_command('file_diff_saved')
-            elif restored_menu_items[index] == FILE:
+            elif restored_menu_items[index] == self.FILE:
                 self.view.run_command('file_diff_file')
-            elif restored_menu_items[index] == TAB:
+            elif restored_menu_items[index] == self.TAB:
                 self.view.run_command('file_diff_tab')
         self.view.window().show_quick_panel(menu_items, on_done)
 
 
 class FileDiffCommand(sublime_plugin.TextCommand):
+    def settings(self):
+        return sublime.load_settings('FileDiffs.sublime-settings')
+
     def diff_content(self):
         content = ''
 
@@ -89,13 +92,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if to_file is None:
                 to_file = 'to_file'
 
+        from_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in from_content]
+        to_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in to_content]
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
-        open_in_sublime = SETTINGS.get('open_in_sublime', True)
-        external_command = SETTINGS.get('cmd')
         if not diffs:
             sublime.status_message('No Difference')
         else:
+            external_command = self.settings().get('cmd')
+            open_in_sublime = self.settings().get('open_in_sublime', not external_command)
+
             if external_command:
                 self.diff_with_external(a, b, from_file, to_file)
 
@@ -123,7 +129,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     tmp_file.write(b)
 
             if os.path.exists(from_file):
-                command = SETTINGS.get('cmd')
+                command = self.settings().get('cmd')
                 if command is not None:
                     command = [c.replace(u'$file1', from_file) for c in command]
                     command = [c.replace(u'$file2', to_file) for c in command]
