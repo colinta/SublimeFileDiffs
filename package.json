@@ -1,6 +1,6 @@
 {
   "name": "FileDiffs",
-  "description": "Shows diffs - also in an external diff tool - between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.",
+  "description": "Shows diffs between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.",
   "author": "Colin T.A. Gray (colinta), Sebastian Pape (spape), Jiri Urban (jiriurban)",
   "details": "https://github.com/colinta/SublimeFileDiffs",
   "labels": ["diff/merge"],

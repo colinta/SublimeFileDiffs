@@ -74,12 +74,12 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
         try:
             file_a_exists = os.path.exists(a)
-       except ValueError:
+        except ValueError:
             file_a_exists = False
 
         try:
             file_b_exists = os.path.exists(b)
-       except ValueError:
+        except ValueError:
             file_b_exists = False
 
         if file_a_exists:
