@@ -72,7 +72,17 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         from_content = a
         to_content = b
 
-        if os.path.exists(a):
+        try:
+            file_a_exists = os.path.exists(a)
+       except ValueError:
+            file_a_exists = False
+
+        try:
+            file_b_exists = os.path.exists(b)
+       except ValueError:
+            file_b_exists = False
+
+        if file_a_exists:
             if from_file is None:
                 from_file = a
             with codecs.open(from_file, mode='U', encoding='utf-8') as f:
@@ -82,7 +92,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if from_file is None:
                 from_file = 'from_file'
 
-        if os.path.exists(b):
+        if file_b_exists:
             if to_file is None:
                 to_file = b
             with codecs.open(to_file, mode='U', encoding='utf-8') as f:
