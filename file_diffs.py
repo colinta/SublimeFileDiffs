@@ -27,7 +27,7 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
         saved = self.SAVED
         non_empty_regions = [region for region in self.view.sel() if not region.empty()]
         if len(non_empty_regions) == 2:
-            menu_items.insert(1, SELECTIONS)
+            menu_items.insert(1, self.SELECTIONS)
         elif len(non_empty_regions):
             menu_items = [f.replace(u'Diff file', u'Diff selection') for f in menu_items]
             saved = saved.replace(u'Diff file', u'Diff selection')
