@@ -22,7 +22,7 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
     def settings(self):
         return sublime.load_settings('FileDiffs.sublime-settings')
 
-    def run(self, edit):
+    def run(self, edit, cmd=None):
         menu_items = self.FILE_DIFFS[:]
         saved = self.SAVED
         non_empty_regions = [region for region in self.view.sel() if not region.empty()]
@@ -40,15 +40,15 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
             if index == -1:
                 return
             elif restored_menu_items[index] == self.CLIPBOARD:
-                self.view.run_command('file_diff_clipboard')
+                self.view.run_command('file_diff_clipboard', {'cmd': cmd})
             elif restored_menu_items[index] == self.SELECTIONS:
-                self.view.run_command('file_diff_selections')
+                self.view.run_command('file_diff_selections', {'cmd': cmd})
             elif restored_menu_items[index] == self.SAVED:
-                self.view.run_command('file_diff_saved')
+                self.view.run_command('file_diff_saved', {'cmd': cmd})
             elif restored_menu_items[index] == self.FILE:
-                self.view.run_command('file_diff_file')
+                self.view.run_command('file_diff_file', {'cmd': cmd})
             elif restored_menu_items[index] == self.TAB:
-                self.view.run_command('file_diff_tab')
+                self.view.run_command('file_diff_tab', {'cmd': cmd})
         self.view.window().show_quick_panel(menu_items, on_done)
 
 
@@ -68,7 +68,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
-    def run_diff(self, a, b, from_file=None, to_file=None):
+    def run_diff(self, a, b, from_file, to_file, external_diff_tool):
         from_content = a
         to_content = b
 
@@ -109,20 +109,30 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         if not diffs:
             sublime.status_message('No Difference')
         else:
-            external_command = self.settings().get('cmd')
+            external_command = external_diff_tool or self.settings().get('cmd')
             open_in_sublime = self.settings().get('open_in_sublime', not external_command)
 
             if external_command:
-                self.diff_with_external(a, b, from_file, to_file)
+                self.diff_with_external(external_command, a, b, from_file, to_file)
 
             if open_in_sublime:
                 # fix diffs
                 diffs = map(lambda line: (line and line[-1] == "\n") and line or line + "\n", diffs)
                 self.diff_in_sublime(diffs)
 
-    def diff_with_external(self, a, b, from_file=None, to_file=None):
+    def diff_with_external(self, external_command, a, b, from_file=None, to_file=None):
         try:
-            if not os.path.exists(from_file):
+            try:
+                from_file_exists = os.path.exists(from_file)
+            except ValueError:
+                from_file_exists = False
+
+            try:
+                to_file_exists = os.path.exists(to_file)
+            except ValueError:
+                to_file_exists = False
+
+            if not from_file_exists:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 from_file = tmp_file.name
                 tmp_file.close()
@@ -130,7 +140,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(a)
 
-            if not os.path.exists(to_file):
+            if not to_file_exists:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
@@ -139,11 +149,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     tmp_file.write(b)
 
             if os.path.exists(from_file):
-                command = self.settings().get('cmd')
-                if command is not None:
-                    command = [c.replace(u'$file1', from_file) for c in command]
-                    command = [c.replace(u'$file2', to_file) for c in command]
-                    self.view.window().run_command("exec", {"cmd": command})
+                external_command = [c.replace(u'$file1', from_file) for c in external_command]
+                external_command = [c.replace(u'$file2', to_file) for c in external_command]
+                self.view.window().run_command("exec", {"cmd": external_command})
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
@@ -166,7 +174,8 @@ class FileDiffClipboardCommand(FileDiffCommand):
         current = sublime.get_clipboard()
         self.run_diff(self.diff_content(), current,
             from_file=self.view.file_name(),
-            to_file='(clipboard)')
+            to_file='(clipboard)',
+            external_diff_tool=kwargs.get('cmd', None))
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -210,7 +219,8 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
         self.run_diff(current, diff,
             from_file='first selection',
-            to_file='second selection')
+            to_file='second selection',
+            external_diff_tool=kwargs.get('cmd', None))
 
 
 class FileDiffSavedCommand(FileDiffCommand):
@@ -225,7 +235,8 @@ class FileDiffSavedCommand(FileDiffCommand):
 
         self.run_diff(self.view.file_name(), content,
             from_file=self.view.file_name(),
-            to_file=self.view.file_name() + u' (Unsaved)')
+            to_file=self.view.file_name() + u' (Unsaved)',
+            external_diff_tool=kwargs.get('cmd', None))
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -251,7 +262,9 @@ class FileDiffFileCommand(FileDiffCommand):
         def on_done(index):
             if index > -1:
                 self.run_diff(self.diff_content(), files[index],
-                    from_file=self.view.file_name())
+                    from_file=self.view.file_name(),
+                    to_file=files[index],
+                    external_diff_tool=kwargs.get('cmd', None))
         sublime.set_timeout(lambda: self.view.window().show_quick_panel(file_picker, on_done), 1)
 
     def find_files(self, folders):
@@ -302,7 +315,8 @@ class FileDiffTabCommand(FileDiffCommand):
             if index > -1:
                 self.run_diff(self.diff_content(), contents[index],
                     from_file=self.view.file_name(),
-                    to_file=files[index])
+                    to_file=files[index],
+                    external_diff_tool=kwargs.get('cmd', None))
 
         if len(files) == 1:
             on_done(0)
