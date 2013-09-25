@@ -24,10 +24,10 @@ Or:
 
 ### Sublime Text 3
 
-1. Open the Sublime Text 2 Packages folder
+1. Open the Sublime Text 3 Packages folder
 2. clone this repo, but use the `st3` branch
 
-       git clone -b st3 git@github.com:colinta/SublimeFileDiffs
+       git clone -b st3 https://github.com/colinta/SublimeFileDiffs.git
 
 Add External Diff Tool
 --------
