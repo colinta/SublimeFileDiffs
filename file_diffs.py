@@ -160,16 +160,16 @@ class FileDiffClipboardCommand(FileDiffCommand):
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
-    def run(self, edit, **kwargs):
-        regions = self.view.sel()
-        current = self.view.substr(regions[0])
-        diff = self.view.substr(regions[1])
-
-        # trim off indent
+    def trim_indent(self, lines):
         indent = None
-        for line in current.splitlines():
+        for line in lines:
+            # ignore blank lines
+            if line == '':
+                continue
+
             new_indent = re.match('[ \t]*', line).group(0)
-            if new_indent == '':
+            # ignore lines that only consist of whitespace
+            if len(new_indent) == len(line):
                 continue
 
             if indent is None:
@@ -179,26 +179,24 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
             if not indent:
                 break
+        return indent
 
-        if indent:
-            current = u"\n".join(line[len(indent):] for line in current.splitlines())
+    def run(self, edit, **kwargs):
+        regions = self.view.sel()
+        first_selection = self.view.substr(regions[0])
+        second_selection = self.view.substr(regions[1])
 
         # trim off indent
-        indent = None
-        for line in diff.splitlines():
-            new_indent = re.match('[ \t]*', line).group(0)
-            if new_indent == '':
-                continue
-
-            if indent is None:
-                indent = new_indent
-            elif len(new_indent) < len(indent):
-                indent = new_indent
-
+        indent = self.trim_indent(first_selection.splitlines())
         if indent:
-            diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
+            first_selection = u"\n".join(line[len(indent):] for line in first_selection.splitlines())
 
-        self.run_diff(current, diff,
+        # trim off indent
+        indent = self.trim_indent(second_selection.splitlines())
+        if indent:
+            second_selection = u"\n".join(line[len(indent):] for line in second_selection.splitlines())
+
+        self.run_diff(first_selection, second_selection,
             from_file='first selection',
             to_file='second selection',
             external_diff_tool=kwargs.get('cmd', None))
