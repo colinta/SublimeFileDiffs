@@ -68,16 +68,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
-    def run_diff(self, a, b, from_file, to_file, external_diff_tool):
-        def prep_content(ab, file_name, default_name):
-            content = ab.splitlines(True)
-            if file_name is None:
-                file_name = default_name
-            content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
-            return (content, file_name)
+    def prep_content(self, ab, file_name, default_name):
+        content = ab.splitlines(True)
+        if file_name is None:
+            file_name = default_name
+        content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
+        return (content, file_name)
 
-        (from_content, from_file) = prep_content(a,from_file,'from_file')
-        (to_content, to_file) = prep_content(b,to_file,'to_file')
+    def run_diff(self, a, b, from_file, to_file, external_diff_tool):
+        (from_content, from_file) = self.prep_content(a, from_file, 'from_file')
+        (to_content, to_file) = self.prep_content(b, to_file, 'to_file')
 
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
