@@ -75,7 +75,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
         return (content, file_name)
 
-    def run_diff(self, a, b, from_file, to_file, external_diff_tool):
+    def run_diff(self, a, b, from_file, to_file, **options):
+        external_diff_tool = options.get('cmd')
+
         (from_content, from_file) = self.prep_content(a, from_file, 'from_file')
         (to_content, to_file) = self.prep_content(b, to_file, 'to_file')
 
@@ -156,7 +158,7 @@ class FileDiffClipboardCommand(FileDiffCommand):
         self.run_diff(self.diff_content(), clipboard,
             from_file=self.view.file_name(),
             to_file='(clipboard)',
-            external_diff_tool=kwargs.get('cmd', None))
+            **kwargs)
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -199,7 +201,7 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         self.run_diff(first_selection, second_selection,
             from_file='first selection',
             to_file='second selection',
-            external_diff_tool=kwargs.get('cmd', None))
+            **kwargs)
 
 
 class FileDiffSavedCommand(FileDiffCommand):
@@ -207,7 +209,7 @@ class FileDiffSavedCommand(FileDiffCommand):
         self.run_diff(self.read_file(self.view.file_name()), self.diff_content(),
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)',
-            external_diff_tool=kwargs.get('cmd', None))
+            **kwargs)
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -235,7 +237,7 @@ class FileDiffFileCommand(FileDiffCommand):
                 self.run_diff(self.diff_content(), self.read_file(files[index]),
                     from_file=self.view.file_name(),
                     to_file=files[index],
-                    external_diff_tool=kwargs.get('cmd', None))
+                    **kwargs)
         sublime.set_timeout(lambda: self.view.window().show_quick_panel(file_picker, on_done), 1)
 
     def find_files(self, folders):
@@ -287,7 +289,7 @@ class FileDiffTabCommand(FileDiffCommand):
                 self.run_diff(self.diff_content(), contents[index],
                     from_file=self.view.file_name(),
                     to_file=files[index],
-                    external_diff_tool=kwargs.get('cmd', None))
+                    **kwargs)
 
         if len(files) == 1:
             on_done(0)
