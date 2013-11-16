@@ -152,8 +152,8 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        current = sublime.get_clipboard()
-        self.run_diff(self.diff_content(), current,
+        clipboard = sublime.get_clipboard()
+        self.run_diff(self.diff_content(), clipboard,
             from_file=self.view.file_name(),
             to_file='(clipboard)',
             external_diff_tool=kwargs.get('cmd', None))
@@ -204,15 +204,7 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        content = ''
-        for region in self.view.sel():
-            if region.empty():
-                continue
-            content += self.view.substr(region)
-        if not content:
-            content = self.view.substr(sublime.Region(0, self.view.size()))
-
-        self.run_diff(self.read_file(self.view.file_name()), content,
+        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(),
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)',
             external_diff_tool=kwargs.get('cmd', None))
