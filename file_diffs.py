@@ -70,20 +70,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def run_diff(self, a, b, from_file, to_file, external_diff_tool):
         def prep_content(ab, file_name, default_name):
-            content = ab
-            try:
-                file_ab_exists = os.path.exists(ab)
-            except ValueError:
-                file_ab_exists = False
-
-            if file_ab_exists:
-                if file_name is None:
-                    file_name = ab
-                content = self.read_file(file_name).splitlines(True)
-            else:
-                content = ab.splitlines(True)
-                if file_name is None:
-                    file_name = default_name
+            content = ab.splitlines(True)
+            if file_name is None:
+                file_name = default_name
             content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
             return (content, file_name)
 
@@ -225,7 +214,7 @@ class FileDiffSavedCommand(FileDiffCommand):
         if not content:
             content = self.view.substr(sublime.Region(0, self.view.size()))
 
-        self.run_diff(self.view.file_name(), content,
+        self.run_diff(self.read_file(self.view.file_name()), content,
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)',
             external_diff_tool=kwargs.get('cmd', None))
@@ -253,7 +242,7 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                self.run_diff(self.diff_content(), files[index],
+                self.run_diff(self.diff_content(), self.read_file(files[index]),
                     from_file=self.view.file_name(),
                     to_file=files[index],
                     external_diff_tool=kwargs.get('cmd', None))
