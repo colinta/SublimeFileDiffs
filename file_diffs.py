@@ -69,41 +69,28 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return content
 
     def run_diff(self, a, b, from_file, to_file, external_diff_tool):
-        from_content = a
-        to_content = b
+        def prep_content(ab, file_name, default_name):
+            content = ab
+            try:
+                file_ab_exists = os.path.exists(ab)
+            except ValueError:
+                file_ab_exists = False
 
-        try:
-            file_a_exists = os.path.exists(a)
-        except ValueError:
-            file_a_exists = False
+            if file_ab_exists:
+                if file_name is None:
+                    file_name = ab
+                with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+                    content = f.readlines()
+            else:
+                content = ab.splitlines(True)
+                if file_name is None:
+                    file_name = default_name
+            content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
+            return (content, file_name)
 
-        try:
-            file_b_exists = os.path.exists(b)
-        except ValueError:
-            file_b_exists = False
+        (from_content, from_file) = prep_content(a,from_file,'from_file')
+        (to_content, to_file) = prep_content(b,to_file,'to_file')
 
-        if file_a_exists:
-            if from_file is None:
-                from_file = a
-            with codecs.open(from_file, mode='U', encoding='utf-8') as f:
-                from_content = f.readlines()
-        else:
-            from_content = a.splitlines(True)
-            if from_file is None:
-                from_file = 'from_file'
-
-        if file_b_exists:
-            if to_file is None:
-                to_file = b
-            with codecs.open(to_file, mode='U', encoding='utf-8') as f:
-                to_content = f.readlines()
-        else:
-            to_content = b.splitlines(True)
-            if to_file is None:
-                to_file = 'to_file'
-
-        from_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in from_content]
-        to_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in to_content]
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
         if not diffs:
