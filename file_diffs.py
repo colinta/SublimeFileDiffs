@@ -79,8 +79,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if file_ab_exists:
                 if file_name is None:
                     file_name = ab
-                with codecs.open(file_name, mode='U', encoding='utf-8') as f:
-                    content = f.readlines()
+                content = self.read_file(file_name).splitlines(True)
             else:
                 content = ab.splitlines(True)
                 if file_name is None:
@@ -149,6 +148,12 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         scratch.set_scratch(True)
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
         scratch.run_command('file_diff_dummy1', {'content': diffs})
+
+    def read_file(self, file_name):
+        content=""
+        with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+            content = f.read()
+        return content
 
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
