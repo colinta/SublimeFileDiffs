@@ -69,41 +69,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return content
 
     def run_diff(self, a, b, from_file, to_file, external_diff_tool):
-        from_content = a
-        to_content = b
+        def prep_content(ab, file_name, default_name):
+            content = ab.splitlines(True)
+            if file_name is None:
+                file_name = default_name
+            content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
+            return (content, file_name)
 
-        try:
-            file_a_exists = os.path.exists(a)
-        except ValueError:
-            file_a_exists = False
+        (from_content, from_file) = prep_content(a,from_file,'from_file')
+        (to_content, to_file) = prep_content(b,to_file,'to_file')
 
-        try:
-            file_b_exists = os.path.exists(b)
-        except ValueError:
-            file_b_exists = False
-
-        if file_a_exists:
-            if from_file is None:
-                from_file = a
-            with codecs.open(from_file, mode='U', encoding='utf-8') as f:
-                from_content = f.readlines()
-        else:
-            from_content = a.splitlines(True)
-            if from_file is None:
-                from_file = 'from_file'
-
-        if file_b_exists:
-            if to_file is None:
-                to_file = b
-            with codecs.open(to_file, mode='U', encoding='utf-8') as f:
-                to_content = f.readlines()
-        else:
-            to_content = b.splitlines(True)
-            if to_file is None:
-                to_file = 'to_file'
-
-        from_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in from_content]
-        to_content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in to_content]
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
         if not diffs:
@@ -162,6 +137,12 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         scratch.set_scratch(True)
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
         scratch.run_command('file_diff_dummy1', {'content': diffs})
+
+    def read_file(self, file_name):
+        content=""
+        with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+            content = f.read()
+        return content
 
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
@@ -233,7 +214,7 @@ class FileDiffSavedCommand(FileDiffCommand):
         if not content:
             content = self.view.substr(sublime.Region(0, self.view.size()))
 
-        self.run_diff(self.view.file_name(), content,
+        self.run_diff(self.read_file(self.view.file_name()), content,
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + u' (Unsaved)',
             external_diff_tool=kwargs.get('cmd', None))
@@ -261,7 +242,7 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                self.run_diff(self.diff_content(), files[index],
+                self.run_diff(self.diff_content(), self.read_file(files[index]),
                     from_file=self.view.file_name(),
                     to_file=files[index],
                     external_diff_tool=kwargs.get('cmd', None))
