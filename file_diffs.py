@@ -19,9 +19,6 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 
     FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 
-    def settings(self):
-        return sublime.load_settings('FileDiffs.sublime-settings')
-
     def run(self, edit, cmd=None):
         menu_items = self.FILE_DIFFS[:]
         saved = self.SAVED
