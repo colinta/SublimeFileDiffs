@@ -66,6 +66,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return content
 
     def run_diff(self, a, b, from_file=None, to_file=None):
+        SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
         from_content = a
         to_content = b
 
