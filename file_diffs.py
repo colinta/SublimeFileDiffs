@@ -237,14 +237,14 @@ class FileDiffFileCommand(FileDiffCommand):
                     **kwargs)
         sublime.set_timeout(lambda: self.view.window().show_quick_panel(file_picker, on_done), 1)
 
-    def find_files(self, folders):
+    def find_files(self, folders, ret=[]):
         # Cannot access these settings!!  WHY!?
         # folder_exclude_patterns = self.view.settings().get('folder_exclude_patterns')
         # file_exclude_patterns = self.view.settings().get('file_exclude_patterns')
         folder_exclude_patterns = [".svn", ".git", ".hg", "CVS"]
         file_exclude_patterns = ["*.pyc", "*.pyo", "*.exe", "*.dll", "*.obj", "*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", ".DS_Store", "*.class", "*.psd", "*.db"]
+        max_files = self.settings().get('limit', 1000)
 
-        ret = []
         for folder in folders:
             if not os.path.isdir(folder):
                 continue
@@ -254,11 +254,14 @@ class FileDiffFileCommand(FileDiffCommand):
                 if os.path.isdir(fullpath):
                     # excluded folder?
                     if not len([True for pattern in folder_exclude_patterns if fnmatch(file, pattern)]):
-                        ret += self.find_files([fullpath])
+                        self.find_files([fullpath], ret)
                 else:
                     # excluded file?
                     if not len([True for pattern in file_exclude_patterns if fnmatch(file, pattern)]):
                         ret.append(fullpath)
+                if len(ret) >= max_files:
+                    sublime.status_message('Too many files to include all of them in this list')
+                    return ret
         return ret
 
 
