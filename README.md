@@ -39,7 +39,9 @@ Add External Diff Tool *(optional)*
 
 1. Preferences > Package Settings > FileDiffs > Settings - Default
 
-2. Uncomment one of the examples or write you own command to open external diff tool.
+2. Uncomment one of the examples or write your own command to open external diff tool.
+
+   This command *may* need to be a full path (e.g. `/usr/local/bin/ksdiff`), if the command isn't in your `PATH`.
 
 
 Commands
