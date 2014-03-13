@@ -10,6 +10,9 @@ import tempfile
 from fnmatch import fnmatch
 import codecs
 
+if sublime.platform() == "windows":
+    from subprocess import Popen
+
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
     CLIPBOARD = u'Diff file with Clipboard'
     SELECTIONS = u'Diff Selections'
@@ -125,7 +128,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if os.path.exists(from_file):
                 external_command = [c.replace(u'$file1', from_file) for c in external_command]
                 external_command = [c.replace(u'$file2', to_file) for c in external_command]
-                self.view.window().run_command("exec", {"cmd": external_command})
+                if sublime.platform() == "windows":
+                    print external_command
+                    Popen(external_command)
+                else:
+                    self.view.window().run_command("exec", {"cmd": external_command})
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
