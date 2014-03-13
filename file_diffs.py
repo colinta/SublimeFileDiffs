@@ -11,11 +11,11 @@ from fnmatch import fnmatch
 import codecs
 
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
-    CLIPBOARD = 'Diff file with Clipboard'
-    SELECTIONS = 'Diff Selections'
-    SAVED = 'Diff file with Saved'
-    FILE = 'Diff file with File in Project…'
-    TAB = 'Diff file with Open Tab…'
+    CLIPBOARD = u'Diff file with Clipboard'
+    SELECTIONS = u'Diff Selections'
+    SAVED = u'Diff file with Saved'
+    FILE = u'Diff file with File in Project…'
+    TAB = u'Diff file with Open Tab…'
 
     FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
 
