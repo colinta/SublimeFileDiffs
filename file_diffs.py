@@ -10,14 +10,18 @@ import tempfile
 from fnmatch import fnmatch
 import codecs
 
-class FileDiffMenuCommand(sublime_plugin.TextCommand):
-    CLIPBOARD = 'Diff file with Clipboard'
-    SELECTIONS = 'Diff Selections'
-    SAVED = 'Diff file with Saved'
-    FILE = 'Diff file with File in Project…'
-    TAB = 'Diff file with Open Tab…'
+if sublime.platform() == "windows":
+    from subprocess import Popen
 
-    FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB]
+class FileDiffMenuCommand(sublime_plugin.TextCommand):
+    CLIPBOARD = u'Diff file with Clipboard'
+    SELECTIONS = u'Diff Selections'
+    SAVED = u'Diff file with Saved'
+    FILE = u'Diff file with File in Project…'
+    TAB = u'Diff file with Open Tab…'
+    PREVIOUS = u'Diff file with Previous'
+
+    FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
 
     def run(self, edit, cmd=None):
         menu_items = self.FILE_DIFFS[:]
@@ -46,6 +50,8 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
                 self.view.run_command('file_diff_file', {'cmd': cmd})
             elif restored_menu_items[index] == self.TAB:
                 self.view.run_command('file_diff_tab', {'cmd': cmd})
+            elif restored_menu_items[index] == self.PREVIOUS:
+                self.view.run_command('file_diff_previous', {'cmd': cmd})
         self.view.window().show_quick_panel(menu_items, on_done)
 
 
@@ -125,7 +131,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if os.path.exists(from_file):
                 external_command = [c.replace(u'$file1', from_file) for c in external_command]
                 external_command = [c.replace(u'$file2', to_file) for c in external_command]
-                self.view.window().run_command("exec", {"cmd": external_command})
+                if sublime.platform() == "windows":
+                    print external_command
+                    Popen(external_command)
+                else:
+                    self.view.window().run_command("exec", {"cmd": external_command})
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
@@ -296,3 +306,45 @@ class FileDiffTabCommand(FileDiffCommand):
         else:
             menu_items = [os.path.basename(f) for f in files]
             sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
+
+
+previousView = currentView = None
+
+class FileDiffPreviousCommand(FileDiffCommand):
+    def run(self, edit, **kwargs):
+        if previousView:
+            previousView_content = previousView.substr(sublime.Region(0, previousView.size()))
+            previousView_name = ''
+            if previousView.file_name():
+                previousView_name = previousView.file_name()
+            elif previousView.name():
+                previousView_name = previousView.name()
+            else:
+                previousView_name = 'untitled (Previous)'
+
+            view_name = ''
+            if self.view.file_name():
+                view_name = self.view.file_name()
+            elif self.view.name():
+                view_name = self.view.name()
+            else:
+                view_name = 'untitled (Current)'
+
+            self.run_diff(previousView_content, self.diff_content(),
+                from_file=previousView_name,
+                to_file=view_name,
+                **kwargs)
+
+def recordCurrentView(view):
+    global previousView
+    global currentView
+    previousView = currentView
+    currentView = view
+
+class FileDiffListener(sublime_plugin.EventListener):
+    def on_activated(self, view):
+        # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
+        viewids = [v.id() for v in view.window().views()]
+        if view.id() in viewids:
+            if currentView == None or view.id() != currentView.id():
+                recordCurrentView(view)
