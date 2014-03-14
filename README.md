@@ -56,6 +56,8 @@ The rest of the commands are not bound by default:
 
 `file_diff_tab`: Shows the diff of the current file or selection(s) and an open file (aka a file that has a tab).
 
+`file_diff_previous`: Shows the diff of the current file or selection(s) and the previous activated file.
+
 Help!
 -----
 
