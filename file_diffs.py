@@ -13,13 +13,14 @@ import codecs
 if sublime.platform() == "windows":
     from subprocess import Popen
 
+
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
-    CLIPBOARD = u'Diff file with Clipboard'
-    SELECTIONS = u'Diff Selections'
-    SAVED = u'Diff file with Saved'
-    FILE = u'Diff file with File in Project…'
-    TAB = u'Diff file with Open Tab…'
-    PREVIOUS = u'Diff file with Previous'
+    CLIPBOARD = 'Diff file with Clipboard'
+    SELECTIONS = 'Diff Selections'
+    SAVED = 'Diff file with Saved'
+    FILE = 'Diff file with File in Project…'
+    TAB = 'Diff file with Open Tab…'
+    PREVIOUS = 'Diff file with Previous window'
 
     FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
 
@@ -30,14 +31,14 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
         if len(non_empty_regions) == 2:
             menu_items.insert(1, self.SELECTIONS)
         elif len(non_empty_regions):
-            menu_items = [f.replace(u'Diff file', u'Diff selection') for f in menu_items]
-            saved = saved.replace(u'Diff file', u'Diff selection')
+            menu_items = [f.replace('Diff file', 'Diff selection') for f in menu_items]
+            saved = saved.replace('Diff file', 'Diff selection')
 
         if not (self.view.file_name() and self.view.is_dirty()):
             menu_items.remove(saved)
 
         def on_done(index):
-            restored_menu_items = [f.replace(u'Diff selection', u'Diff file') for f in menu_items]
+            restored_menu_items = [f.replace('Diff selection', 'Diff file') for f in menu_items]
             if index == -1:
                 return
             elif restored_menu_items[index] == self.CLIPBOARD:
@@ -129,10 +130,9 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     tmp_file.write(b)
 
             if os.path.exists(from_file):
-                external_command = [c.replace(u'$file1', from_file) for c in external_command]
-                external_command = [c.replace(u'$file2', to_file) for c in external_command]
+                external_command = [c.replace('$file1', from_file) for c in external_command]
+                external_command = [c.replace('$file2', to_file) for c in external_command]
                 if sublime.platform() == "windows":
-                    print external_command
                     Popen(external_command)
                 else:
                     self.view.window().run_command("exec", {"cmd": external_command})
@@ -198,12 +198,12 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         # trim off indent
         indent = self.trim_indent(first_selection.splitlines())
         if indent:
-            first_selection = u"\n".join(line[len(indent):] for line in first_selection.splitlines())
+            first_selection = "\n".join(line[len(indent):] for line in first_selection.splitlines())
 
         # trim off indent
         indent = self.trim_indent(second_selection.splitlines())
         if indent:
-            second_selection = u"\n".join(line[len(indent):] for line in second_selection.splitlines())
+            second_selection = "\n".join(line[len(indent):] for line in second_selection.splitlines())
 
         self.run_diff(first_selection, second_selection,
             from_file='first selection',
@@ -215,7 +215,7 @@ class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         self.run_diff(self.read_file(self.view.file_name()), self.diff_content(),
             from_file=self.view.file_name(),
-            to_file=self.view.file_name() + u' (Unsaved)',
+            to_file=self.view.file_name() + ' (Unsaved)',
             **kwargs)
 
 
@@ -225,7 +225,7 @@ class FileDiffFileCommand(FileDiffCommand):
         folders = self.view.window().folders()
         files = self.find_files(folders)
         for folder in folders:
-            if common == None:
+            if common is None:
                 common = folder
             else:
                 common_len = len(common)
@@ -308,19 +308,19 @@ class FileDiffTabCommand(FileDiffCommand):
             sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
 
 
-previousView = currentView = None
+previous_view = current_view = None
 
 class FileDiffPreviousCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        if previousView:
-            previousView_content = previousView.substr(sublime.Region(0, previousView.size()))
-            previousView_name = ''
-            if previousView.file_name():
-                previousView_name = previousView.file_name()
-            elif previousView.name():
-                previousView_name = previousView.name()
+        if previous_view:
+            previous_view_content = previous_view.substr(sublime.Region(0, previous_view.size()))
+            previous_view_name = ''
+            if previous_view.file_name():
+                previous_view_name = previous_view.file_name()
+            elif previous_view.name():
+                previous_view_name = previous_view.name()
             else:
-                previousView_name = 'untitled (Previous)'
+                previous_view_name = 'untitled (Previous)'
 
             view_name = ''
             if self.view.file_name():
@@ -330,21 +330,21 @@ class FileDiffPreviousCommand(FileDiffCommand):
             else:
                 view_name = 'untitled (Current)'
 
-            self.run_diff(previousView_content, self.diff_content(),
-                from_file=previousView_name,
+            self.run_diff(previous_view_content, self.diff_content(),
+                from_file=previous_view_name,
                 to_file=view_name,
                 **kwargs)
 
-def recordCurrentView(view):
-    global previousView
-    global currentView
-    previousView = currentView
-    currentView = view
+def record_current_view(view):
+    global previous_view
+    global current_view
+    previous_view = current_view
+    current_view = view
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
         # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
         viewids = [v.id() for v in view.window().views()]
         if view.id() in viewids:
-            if currentView == None or view.id() != currentView.id():
-                recordCurrentView(view)
+            if current_view is None or view.id() != current_view.id():
+                record_current_view(view)
