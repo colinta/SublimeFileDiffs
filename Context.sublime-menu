@@ -4,5 +4,6 @@
    { "caption": "Diff Selections", "command": "file_diff_selections" },
    { "caption": "Diff with Clipboard", "command": "file_diff_clipboard" },
    { "caption": "Diff with Saved", "command": "file_diff_saved" },
+   { "caption": "Diff file with Previous window", "command": "file_diff_previous" },
    { "caption": "-" }
 ]

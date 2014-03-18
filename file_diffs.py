@@ -94,6 +94,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if to_file is None:
                 to_file = 'to_file'
 
+        trim_trailing_white_space_before_diff = SETTINGS.get('trim_trailing_white_space_before_diff', False)
+        if trim_trailing_white_space_before_diff:
+            from_content = [line.rstrip() for line in from_content]
+            to_content = [line.rstrip() for line in to_content]
+
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
         open_in_sublime = SETTINGS.get('open_in_sublime', True)
@@ -111,6 +116,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def diff_with_external(self, a, b, from_file=None, to_file=None):
         try:
+            SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
+
             if not os.path.exists(from_file):
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 from_file = tmp_file.name
@@ -126,6 +133,30 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(b)
+
+            trim_trailing_white_space_before_diff = SETTINGS.get('trim_trailing_white_space_before_diff', False)
+            if trim_trailing_white_space_before_diff:
+                def trim_trailing_white_space(file_name):
+                    trim_lines = []
+                    modified = False
+                    with codecs.open(file_name, encoding='utf-8', mode='r') as f:
+                        lines = f.readlines()
+                        lines = [line.replace("\n", "").replace("\r", "") for line in lines]
+                        for line in lines:
+                            trim_line = line.rstrip()
+                            trim_lines.append(trim_line)
+                            if trim_line != line:
+                                modified = True
+                    if modified:
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                        file_name = tmp_file.name
+                        tmp_file.close()
+                        with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
+                            f.writelines(u'\n'.join(trim_lines))
+                    return file_name
+
+                from_file = trim_trailing_white_space(from_file)
+                to_file = trim_trailing_white_space(to_file)
 
             if os.path.exists(from_file):
                 command = SETTINGS.get('cmd')
@@ -338,8 +369,11 @@ def record_current_view(view):
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
-        # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-        viewids = [v.id() for v in view.window().views()]
-        if view.id() in viewids:
-            if current_view is None or view.id() != current_view.id():
-                record_current_view(view)
+        try:
+            # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
+            viewids = [v.id() for v in view.window().views()]
+            if view.id() in viewids:
+                if current_view is None or view.id() != current_view.id():
+                    record_current_view(view)
+        except AttributeError:
+            pass
