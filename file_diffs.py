@@ -371,9 +371,8 @@ class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
         try:
             # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-            viewids = [v.id() for v in view.window().views()]
-            if view.id() in viewids:
-                if current_view is None or view.id() != current_view.id():
-                    record_current_view(view)
-        except AttributeError:
+            view.window().views()
+            if current_view is None or view.id() != current_view.id():
+                record_current_view(view)
+        except:
             pass
