@@ -13,50 +13,53 @@ import codecs
 if sublime.platform() == "windows":
     from subprocess import Popen
 
-SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
-
-CLIPBOARD = u'Diff file with Clipboard'
-SELECTIONS = u'Diff Selections'
-SAVED = u'Diff file with Saved'
-FILE = u'Diff file with File in Project…'
-TAB = u'Diff file with Open Tab…'
-PREVIOUS = u'Diff file with Previous window'
-
-FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
-
 
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
-        menu_items = FILE_DIFFS[:]
-        saved = SAVED
+    CLIPBOARD = 'Diff file with Clipboard'
+    SELECTIONS = 'Diff Selections'
+    SAVED = 'Diff file with Saved'
+    FILE = u'Diff file with File in Project…'
+    TAB = u'Diff file with Open Tab…'
+    PREVIOUS = 'Diff file with Previous window'
+
+    FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
+
+    def run(self, edit, cmd=None):
+        menu_items = self.FILE_DIFFS[:]
+        saved = self.SAVED
         non_empty_regions = [region for region in self.view.sel() if not region.empty()]
         if len(non_empty_regions) == 2:
-            menu_items.insert(1, SELECTIONS)
+            menu_items.insert(1, self.SELECTIONS)
         elif len(non_empty_regions):
-            menu_items = [f.replace(u'Diff file', u'Diff selection') for f in menu_items]
-            saved = saved.replace(u'Diff file', u'Diff selection')
+            menu_items = [f.replace('Diff file', 'Diff selection') for f in menu_items]
+            saved = saved.replace('Diff file', 'Diff selection')
 
         if not (self.view.file_name() and self.view.is_dirty()):
             menu_items.remove(saved)
 
         def on_done(index):
-            restored_menu_items = [f.replace(u'Diff selection', u'Diff file') for f in menu_items]
+            restored_menu_items = [f.replace('Diff selection', 'Diff file') for f in menu_items]
             if index == -1:
                 return
-            elif restored_menu_items[index] == CLIPBOARD:
-                self.view.run_command('file_diff_clipboard')
-            elif restored_menu_items[index] == SELECTIONS:
-                self.view.run_command('file_diff_selections')
-            elif restored_menu_items[index] == SAVED:
-                self.view.run_command('file_diff_saved')
-            elif restored_menu_items[index] == FILE:
-                self.view.run_command('file_diff_file')
-            elif restored_menu_items[index] == TAB:
-                self.view.run_command('file_diff_tab')
+            elif restored_menu_items[index] == self.CLIPBOARD:
+                self.view.run_command('file_diff_clipboard', {'cmd': cmd})
+            elif restored_menu_items[index] == self.SELECTIONS:
+                self.view.run_command('file_diff_selections', {'cmd': cmd})
+            elif restored_menu_items[index] == self.SAVED:
+                self.view.run_command('file_diff_saved', {'cmd': cmd})
+            elif restored_menu_items[index] == self.FILE:
+                self.view.run_command('file_diff_file', {'cmd': cmd})
+            elif restored_menu_items[index] == self.TAB:
+                self.view.run_command('file_diff_tab', {'cmd': cmd})
+            elif restored_menu_items[index] == self.PREVIOUS:
+                self.view.run_command('file_diff_previous', {'cmd': cmd})
         self.view.window().show_quick_panel(menu_items, on_done)
 
 
 class FileDiffCommand(sublime_plugin.TextCommand):
+    def settings(self):
+        return sublime.load_settings('FileDiffs.sublime-settings')
+
     def diff_content(self):
         content = ''
 
@@ -69,56 +72,53 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = self.view.substr(sublime.Region(0, self.view.size()))
         return content
 
-    def run_diff(self, a, b, from_file=None, to_file=None):
-        SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
-        from_content = a
-        to_content = b
+    def prep_content(self, ab, file_name, default_name):
+        content = ab.splitlines(True)
+        if file_name is None:
+            file_name = default_name
+        content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
 
-        if os.path.exists(a):
-            if from_file is None:
-                from_file = a
-            with codecs.open(from_file, mode='U', encoding='utf-8') as f:
-                from_content = f.readlines()
-        else:
-            from_content = a.splitlines(True)
-            if from_file is None:
-                from_file = 'from_file'
-
-        if os.path.exists(b):
-            if to_file is None:
-                to_file = b
-            with codecs.open(to_file, mode='U', encoding='utf-8') as f:
-                to_content = f.readlines()
-        else:
-            to_content = b.splitlines(True)
-            if to_file is None:
-                to_file = 'to_file'
-
-        trim_trailing_white_space_before_diff = SETTINGS.get('trim_trailing_white_space_before_diff', False)
+        trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
         if trim_trailing_white_space_before_diff:
-            from_content = [line.rstrip() for line in from_content]
-            to_content = [line.rstrip() for line in to_content]
+            content = [line.rstrip() for line in content]
+
+        return (content, file_name)
+
+    def run_diff(self, a, b, from_file, to_file, **options):
+        external_diff_tool = options.get('cmd')
+
+        (from_content, from_file) = self.prep_content(a, from_file, 'from_file')
+        (to_content, to_file) = self.prep_content(b, to_file, 'to_file')
 
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
-        open_in_sublime = SETTINGS.get('open_in_sublime', True)
-        external_command = SETTINGS.get('cmd')
         if not diffs:
             sublime.status_message('No Difference')
         else:
+            external_command = external_diff_tool or self.settings().get('cmd')
+            open_in_sublime = self.settings().get('open_in_sublime', not external_command)
+
             if external_command:
-                self.diff_with_external(a, b, from_file, to_file)
+                self.diff_with_external(external_command, a, b, from_file, to_file)
 
             if open_in_sublime:
                 # fix diffs
                 diffs = map(lambda line: (line and line[-1] == "\n") and line or line + "\n", diffs)
                 self.diff_in_sublime(diffs)
 
-    def diff_with_external(self, a, b, from_file=None, to_file=None):
+    def diff_with_external(self, external_command, a, b, from_file=None, to_file=None):
         try:
-            SETTINGS = sublime.load_settings('FileDiffs.sublime-settings')
+            try:
+                from_file_exists = os.path.exists(from_file)
+            except ValueError:
+                from_file_exists = False
 
-            if not os.path.exists(from_file):
+            try:
+                to_file_exists = os.path.exists(to_file)
+            except ValueError:
+                to_file_exists = False
+
+            if not from_file_exists:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 from_file = tmp_file.name
                 tmp_file.close()
@@ -126,7 +126,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(a)
 
-            if not os.path.exists(to_file):
+            if not to_file_exists:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
@@ -134,7 +134,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(b)
 
-            trim_trailing_white_space_before_diff = SETTINGS.get('trim_trailing_white_space_before_diff', False)
+            trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
             if trim_trailing_white_space_before_diff:
                 def trim_trailing_white_space(file_name):
                     trim_lines = []
@@ -152,21 +152,19 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                         file_name = tmp_file.name
                         tmp_file.close()
                         with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
-                            f.writelines(u'\n'.join(trim_lines))
+                            f.writelines('\n'.join(trim_lines))
                     return file_name
 
                 from_file = trim_trailing_white_space(from_file)
                 to_file = trim_trailing_white_space(to_file)
 
             if os.path.exists(from_file):
-                command = SETTINGS.get('cmd')
-                if command is not None:
-                    command = [c.replace(u'$file1', from_file) for c in command]
-                    command = [c.replace(u'$file2', to_file) for c in command]
-                    if sublime.platform() == "windows":
-                        Popen(command)
-                    else:
-                        self.view.window().run_command("exec", {"cmd": command})
+                external_command = [c.replace('$file1', from_file) for c in external_command]
+                external_command = [c.replace('$file2', to_file) for c in external_command]
+                if sublime.platform() == "windows":
+                    Popen(external_command)
+                else:
+                    self.view.window().run_command("exec", {"cmd": external_command})
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
@@ -178,6 +176,12 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
         scratch.run_command('file_diff_dummy1', {'content': diffs})
 
+    def read_file(self, file_name):
+        content=""
+        with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+            content = f.read()
+        return content
+
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
     def run(self, edit, content):
@@ -186,23 +190,24 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        current = sublime.get_clipboard()
-        self.run_diff(self.diff_content(), current,
+        clipboard = sublime.get_clipboard()
+        self.run_diff(self.diff_content(), clipboard,
             from_file=self.view.file_name(),
-            to_file='(clipboard)')
+            to_file='(clipboard)',
+            **kwargs)
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
-    def run(self, edit, **kwargs):
-        regions = self.view.sel()
-        current = self.view.substr(regions[0])
-        diff = self.view.substr(regions[1])
-
-        # trim off indent
+    def trim_indent(self, lines):
         indent = None
-        for line in current.splitlines():
+        for line in lines:
+            # ignore blank lines
+            if line == '':
+                continue
+
             new_indent = re.match('[ \t]*', line).group(0)
-            if new_indent == '':
+            # ignore lines that only consist of whitespace
+            if len(new_indent) == len(line):
                 continue
 
             if indent is None:
@@ -212,43 +217,35 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
             if not indent:
                 break
+        return indent
 
-        if indent:
-            current = u"\n".join(line[len(indent):] for line in current.splitlines())
+    def run(self, edit, **kwargs):
+        regions = self.view.sel()
+        first_selection = self.view.substr(regions[0])
+        second_selection = self.view.substr(regions[1])
 
         # trim off indent
-        indent = None
-        for line in diff.splitlines():
-            new_indent = re.match('[ \t]*', line).group(0)
-            if new_indent == '':
-                continue
-
-            if indent is None:
-                indent = new_indent
-            elif len(new_indent) < len(indent):
-                indent = new_indent
-
+        indent = self.trim_indent(first_selection.splitlines())
         if indent:
-            diff = u"\n".join(line[len(indent):] for line in diff.splitlines())
+            first_selection = "\n".join(line[len(indent):] for line in first_selection.splitlines())
 
-        self.run_diff(current, diff,
+        # trim off indent
+        indent = self.trim_indent(second_selection.splitlines())
+        if indent:
+            second_selection = "\n".join(line[len(indent):] for line in second_selection.splitlines())
+
+        self.run_diff(first_selection, second_selection,
             from_file='first selection',
-            to_file='second selection')
+            to_file='second selection',
+            **kwargs)
 
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        content = ''
-        for region in self.view.sel():
-            if region.empty():
-                continue
-            content += self.view.substr(region)
-        if not content:
-            content = self.view.substr(sublime.Region(0, self.view.size()))
-
-        self.run_diff(self.view.file_name(), content,
+        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(),
             from_file=self.view.file_name(),
-            to_file=self.view.file_name() + u' (Unsaved)')
+            to_file=self.view.file_name() + ' (Unsaved)',
+            **kwargs)
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -273,18 +270,20 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                self.run_diff(self.diff_content(), files[index],
-                    from_file=self.view.file_name())
+                self.run_diff(self.diff_content(), self.read_file(files[index]),
+                    from_file=self.view.file_name(),
+                    to_file=files[index],
+                    **kwargs)
         sublime.set_timeout(lambda: self.view.window().show_quick_panel(file_picker, on_done), 1)
 
-    def find_files(self, folders):
+    def find_files(self, folders, ret=[]):
         # Cannot access these settings!!  WHY!?
         # folder_exclude_patterns = self.view.settings().get('folder_exclude_patterns')
         # file_exclude_patterns = self.view.settings().get('file_exclude_patterns')
         folder_exclude_patterns = [".svn", ".git", ".hg", "CVS"]
         file_exclude_patterns = ["*.pyc", "*.pyo", "*.exe", "*.dll", "*.obj", "*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", ".DS_Store", "*.class", "*.psd", "*.db"]
+        max_files = self.settings().get('limit', 1000)
 
-        ret = []
         for folder in folders:
             if not os.path.isdir(folder):
                 continue
@@ -294,11 +293,14 @@ class FileDiffFileCommand(FileDiffCommand):
                 if os.path.isdir(fullpath):
                     # excluded folder?
                     if not len([True for pattern in folder_exclude_patterns if fnmatch(file, pattern)]):
-                        ret += self.find_files([fullpath])
+                        self.find_files([fullpath], ret)
                 else:
                     # excluded file?
                     if not len([True for pattern in file_exclude_patterns if fnmatch(file, pattern)]):
                         ret.append(fullpath)
+                if len(ret) >= max_files:
+                    sublime.status_message('Too many files to include all of them in this list')
+                    return ret
         return ret
 
 
@@ -325,7 +327,8 @@ class FileDiffTabCommand(FileDiffCommand):
             if index > -1:
                 self.run_diff(self.diff_content(), contents[index],
                     from_file=self.view.file_name(),
-                    to_file=files[index])
+                    to_file=files[index],
+                    **kwargs)
 
         if len(files) == 1:
             on_done(0)
