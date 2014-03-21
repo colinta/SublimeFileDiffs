@@ -190,9 +190,14 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
+        from_file = self.view.file_name()
+        for region in self.view.sel():
+            if not region.empty():
+                from_file += ' (Selection)'
+                break
         clipboard = sublime.get_clipboard()
         self.run_diff(self.diff_content(), clipboard,
-            from_file=self.view.file_name(),
+            from_file=from_file,
             to_file='(clipboard)',
             **kwargs)
 
