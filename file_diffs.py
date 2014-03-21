@@ -18,8 +18,8 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
     CLIPBOARD = 'Diff file with Clipboard'
     SELECTIONS = 'Diff Selections'
     SAVED = 'Diff file with Saved'
-    FILE = 'Diff file with File in Project…'
-    TAB = 'Diff file with Open Tab…'
+    FILE = u'Diff file with File in Project…'
+    TAB = u'Diff file with Open Tab…'
     PREVIOUS = 'Diff file with Previous window'
 
     FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
@@ -77,6 +77,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         if file_name is None:
             file_name = default_name
         content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
+
+        trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
+        if trim_trailing_white_space_before_diff:
+            content = [line.rstrip() for line in content]
+
         return (content, file_name)
 
     def run_diff(self, a, b, from_file, to_file, **options):
@@ -129,6 +134,30 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(b)
 
+            trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
+            if trim_trailing_white_space_before_diff:
+                def trim_trailing_white_space(file_name):
+                    trim_lines = []
+                    modified = False
+                    with codecs.open(file_name, encoding='utf-8', mode='r') as f:
+                        lines = f.readlines()
+                        lines = [line.replace("\n", "").replace("\r", "") for line in lines]
+                        for line in lines:
+                            trim_line = line.rstrip()
+                            trim_lines.append(trim_line)
+                            if trim_line != line:
+                                modified = True
+                    if modified:
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                        file_name = tmp_file.name
+                        tmp_file.close()
+                        with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
+                            f.writelines('\n'.join(trim_lines))
+                    return file_name
+
+                from_file = trim_trailing_white_space(from_file)
+                to_file = trim_trailing_white_space(to_file)
+
             if os.path.exists(from_file):
                 external_command = [c.replace('$file1', from_file) for c in external_command]
                 external_command = [c.replace('$file2', to_file) for c in external_command]
@@ -161,9 +190,14 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
+        from_file = self.view.file_name()
+        for region in self.view.sel():
+            if not region.empty():
+                from_file += ' (Selection)'
+                break
         clipboard = sublime.get_clipboard()
         self.run_diff(self.diff_content(), clipboard,
-            from_file=self.view.file_name(),
+            from_file=from_file,
             to_file='(clipboard)',
             **kwargs)
 
@@ -343,8 +377,10 @@ def record_current_view(view):
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
-        # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-        viewids = [v.id() for v in view.window().views()]
-        if view.id() in viewids:
+        try:
+            # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
+            view.window().views()
             if current_view is None or view.id() != current_view.id():
                 record_current_view(view)
+        except AttributeError:
+            pass
