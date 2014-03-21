@@ -31,4 +31,6 @@
 
 	// deltawalker (DeltaWalker)
 	// "cmd": ["deltawalker", "-nosplash", "$file1", "$file2"]
+
+	// "trim_trailing_white_space_before_diff": false
 }
