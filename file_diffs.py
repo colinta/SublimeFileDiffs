@@ -338,7 +338,10 @@ class FileDiffTabCommand(FileDiffCommand):
         if len(files) == 1:
             on_done(0)
         else:
-            menu_items = [os.path.basename(f) for f in files]
+            if self.settings().get('expand_full_file_name_in_tab', False):
+                menu_items = [[os.path.basename(f),f] for f in files]
+            else:
+                menu_items = [os.path.basename(f) for f in files]
             sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
 
 
