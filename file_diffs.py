@@ -201,6 +201,9 @@ class FileDiffClipboardCommand(FileDiffCommand):
             to_file='(clipboard)',
             **kwargs)
 
+    def is_visible(self):
+        return sublime.get_clipboard()
+
 
 class FileDiffSelectionsCommand(FileDiffCommand):
     def trim_indent(self, lines):
@@ -244,6 +247,9 @@ class FileDiffSelectionsCommand(FileDiffCommand):
             to_file='second selection',
             **kwargs)
 
+    def is_visible(self):
+        return len(self.view.sel()) > 1
+
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
@@ -251,6 +257,9 @@ class FileDiffSavedCommand(FileDiffCommand):
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + ' (Unsaved)',
             **kwargs)
+
+    def is_visible(self):
+        return self.view.file_name() and self.view.is_dirty()
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -338,8 +347,14 @@ class FileDiffTabCommand(FileDiffCommand):
         if len(files) == 1:
             on_done(0)
         else:
-            menu_items = [os.path.basename(f) for f in files]
+            if self.settings().get('expand_full_file_name_in_tab', False):
+                menu_items = [[os.path.basename(f),f] for f in files]
+            else:
+                menu_items = [os.path.basename(f) for f in files]
             sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
+
+    def is_visible(self):
+        return len(self.view.window().views()) > 1
 
 
 previous_view = current_view = None
@@ -369,6 +384,9 @@ class FileDiffPreviousCommand(FileDiffCommand):
                 to_file=view_name,
                 **kwargs)
 
+    def is_visible(self):
+        return previous_view
+
 def record_current_view(view):
     global previous_view
     global current_view
@@ -377,10 +395,11 @@ def record_current_view(view):
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
-        # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-        if view not in view.window().views():
-            return
         try:
+            # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
+            viewids = [v.id() for v in view.window().views()]
+            if view.id() not in viewids:
+                return
             if current_view is None or view.id() != current_view.id():
                 record_current_view(view)
         except AttributeError:
