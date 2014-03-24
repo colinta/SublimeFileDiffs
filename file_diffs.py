@@ -278,9 +278,9 @@ class FileDiffFileCommand(FileDiffCommand):
 
         my_file = self.view.file_name()
         # filter out my_file
-        files = [file for file in files if file != my_file]
+        files = [f for f in files if f != my_file]
         # shorten names using common length
-        file_picker = [file[len(common):] for file in files]
+        file_picker = [f[len(common):] for f in files]
 
         def on_done(index):
             if index > -1:
@@ -302,15 +302,15 @@ class FileDiffFileCommand(FileDiffCommand):
             if not os.path.isdir(folder):
                 continue
 
-            for file in os.listdir(folder):
-                fullpath = os.path.join(folder, file)
+            for f in os.listdir(folder):
+                fullpath = os.path.join(folder, f)
                 if os.path.isdir(fullpath):
                     # excluded folder?
-                    if not len([True for pattern in folder_exclude_patterns if fnmatch(file, pattern)]):
+                    if not len([True for pattern in folder_exclude_patterns if fnmatch(f, pattern)]):
                         self.find_files([fullpath], ret)
                 else:
                     # excluded file?
-                    if not len([True for pattern in file_exclude_patterns if fnmatch(file, pattern)]):
+                    if not len([True for pattern in file_exclude_patterns if fnmatch(f, pattern)]):
                         ret.append(fullpath)
                 if len(ret) >= max_files:
                     sublime.status_message('Too many files to include all of them in this list')
