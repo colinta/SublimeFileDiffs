@@ -201,6 +201,9 @@ class FileDiffClipboardCommand(FileDiffCommand):
             to_file='(clipboard)',
             **kwargs)
 
+    def is_visible(self):
+        return sublime.get_clipboard()
+
 
 class FileDiffSelectionsCommand(FileDiffCommand):
     def trim_indent(self, lines):
@@ -244,6 +247,9 @@ class FileDiffSelectionsCommand(FileDiffCommand):
             to_file='second selection',
             **kwargs)
 
+    def is_visible(self):
+        return len(self.view.sel()) > 1
+
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
@@ -251,6 +257,9 @@ class FileDiffSavedCommand(FileDiffCommand):
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + ' (Unsaved)',
             **kwargs)
+
+    def is_visible(self):
+        return self.view.file_name() and self.view.is_dirty()
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -344,6 +353,9 @@ class FileDiffTabCommand(FileDiffCommand):
                 menu_items = [os.path.basename(f) for f in files]
             sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
 
+    def is_visible(self):
+        return len(self.view.window().views()) > 1
+
 
 previous_view = current_view = None
 
@@ -371,6 +383,9 @@ class FileDiffPreviousCommand(FileDiffCommand):
                 from_file=previous_view_name,
                 to_file=view_name,
                 **kwargs)
+
+    def is_visible(self):
+        return previous_view
 
 def record_current_view(view):
     global previous_view
