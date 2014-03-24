@@ -380,10 +380,11 @@ def record_current_view(view):
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
-        # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-        if view not in view.window().views():
-            return
         try:
+            # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
+            viewids = [v.id() for v in view.window().views()]
+            if view.id() not in viewids:
+                return
             if current_view is None or view.id() != current_view.id():
                 record_current_view(view)
         except AttributeError:
