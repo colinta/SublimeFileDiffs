@@ -266,7 +266,7 @@ class FileDiffFileCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         common = None
         folders = self.view.window().folders()
-        files = self.find_files(folders)
+        files = self.find_files(folders, [])
         for folder in folders:
             if common is None:
                 common = folder
