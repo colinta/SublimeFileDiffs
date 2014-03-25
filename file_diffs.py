@@ -201,7 +201,7 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        from_file = self.view.file_name()
+        from_file = self.get_file_name(self.view, 'untitled')
         for region in self.view.sel():
             if not region.empty():
                 from_file += ' (Selection)'
