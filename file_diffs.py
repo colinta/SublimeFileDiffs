@@ -61,16 +61,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
     def settings(self):
         return sublime.load_settings('FileDiffs.sublime-settings')
 
-    def diff_content(self):
+    def diff_content(self, view):
         content = ''
 
-        for region in self.view.sel():
+        for region in view.sel():
             if region.empty():
                 continue
-            content += self.view.substr(region)
+            content += view.substr(region)
 
         if not content:
-            content = self.view.substr(sublime.Region(0, self.view.size()))
+            content = view.substr(sublime.Region(0, view.size()))
         return content
 
     def prep_content(self, ab, file_name, default_name):
@@ -183,6 +183,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = f.read()
         return content
 
+    def get_file_name(self, view, default_name):
+        file_name = ''
+        if view.file_name():
+            file_name = view.file_name()
+        elif view.name():
+            file_name = view.name()
+        else:
+            file_name = default_name
+        return file_name
+
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
     def run(self, edit, content):
@@ -197,7 +207,7 @@ class FileDiffClipboardCommand(FileDiffCommand):
                 from_file += ' (Selection)'
                 break
         clipboard = sublime.get_clipboard()
-        self.run_diff(self.diff_content(), clipboard,
+        self.run_diff(self.diff_content(self.view), clipboard,
             from_file=from_file,
             to_file='(clipboard)',
             **kwargs)
@@ -254,7 +264,7 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(),
+        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(self.view),
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + ' (Unsaved)',
             **kwargs)
@@ -285,7 +295,7 @@ class FileDiffFileCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                self.run_diff(self.diff_content(), self.read_file(files[index]),
+                self.run_diff(self.diff_content(self.view), self.read_file(files[index]),
                     from_file=self.view.file_name(),
                     to_file=files[index],
                     **kwargs)
@@ -340,7 +350,7 @@ class FileDiffTabCommand(FileDiffCommand):
 
         def on_done(index):
             if index > -1:
-                self.run_diff(self.diff_content(), contents[index],
+                self.run_diff(self.diff_content(self.view), contents[index],
                     from_file=self.view.file_name(),
                     to_file=files[index],
                     **kwargs)
@@ -363,26 +373,9 @@ previous_view = current_view = None
 class FileDiffPreviousCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         if previous_view:
-            previous_view_content = previous_view.substr(sublime.Region(0, previous_view.size()))
-            previous_view_name = ''
-            if previous_view.file_name():
-                previous_view_name = previous_view.file_name()
-            elif previous_view.name():
-                previous_view_name = previous_view.name()
-            else:
-                previous_view_name = 'untitled (Previous)'
-
-            view_name = ''
-            if self.view.file_name():
-                view_name = self.view.file_name()
-            elif self.view.name():
-                view_name = self.view.name()
-            else:
-                view_name = 'untitled (Current)'
-
-            self.run_diff(previous_view_content, self.diff_content(),
-                from_file=previous_view_name,
-                to_file=view_name,
+            self.run_diff(self.diff_content(previous_view), self.diff_content(self.view),
+                from_file=self.get_file_name(previous_view, 'untitled (Previous)'),
+                to_file=self.get_file_name(self.view, 'untitled (Current)'),
                 **kwargs)
 
     def is_visible(self):
