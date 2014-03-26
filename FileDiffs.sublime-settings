@@ -35,4 +35,6 @@
 	// "trim_trailing_white_space_before_diff": false
 
 	// "expand_full_file_name_in_tab": false
+
+	// "apply_tempfile_changes_after_diff_tool": false
 }

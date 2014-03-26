@@ -100,14 +100,14 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             open_in_sublime = self.settings().get('open_in_sublime', not external_command)
 
             if external_command:
-                self.diff_with_external(external_command, a, b, from_file, to_file)
+                self.diff_with_external(external_command, a, b, from_file, to_file, **options)
 
             if open_in_sublime:
                 # fix diffs
                 diffs = map(lambda line: (line and line[-1] == "\n") and line or line + "\n", diffs)
                 self.diff_in_sublime(diffs)
 
-    def diff_with_external(self, external_command, a, b, from_file=None, to_file=None):
+    def diff_with_external(self, external_command, a, b, from_file=None, to_file=None, **options):
         try:
             try:
                 from_file_exists = os.path.exists(from_file)
@@ -166,6 +166,17 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     Popen(external_command)
                 else:
                     subprocess.Popen(external_command)
+
+                apply_tempfile_changes_after_diff_tool = self.settings().get('apply_tempfile_changes_after_diff_tool', False)
+                post_diff_tool = options.get('post_diff_tool')
+                if apply_tempfile_changes_after_diff_tool and post_diff_tool is not None and (not from_file_exists or not to_file_exists):
+                    if from_file_exists:
+                        from_file = None
+                    if to_file_exists:
+                        to_file = None
+                    # Use a dialog to block st and wait for the closing of the diff tool
+                    if sublime.ok_cancel_dialog("Apply changes from tempfile after external diff tool execution?"):
+                        post_diff_tool(from_file, to_file)
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
@@ -193,6 +204,27 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             file_name = default_name
         return file_name
 
+    def get_content_from_file(self, file_name):
+        with codecs.open(file_name, encoding='utf-8', mode='r') as f:
+            lines = f.readlines()
+            lines = [line.replace("\r\n", "\n").replace("\r", "\n") for line in lines]
+            content = ''.join(lines)
+            return content
+
+    def update_view(self, view, edit, tmp_file):
+        if tmp_file:
+            non_empty_regions = [region for region in view.sel() if not region.empty()]
+            nb_non_empty_regions = len(non_empty_regions)
+            region = None
+            if nb_non_empty_regions == 0:
+                region = sublime.Region(0, view.size())
+            elif nb_non_empty_regions == 1:
+                region = non_empty_regions[0]
+            else:
+                sublime.status_message('Cannot update multiselection')
+                return
+            view.replace(edit, region, self.get_content_from_file(tmp_file))
+
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
     def run(self, edit, content):
@@ -207,6 +239,11 @@ class FileDiffClipboardCommand(FileDiffCommand):
                 from_file += ' (Selection)'
                 break
         clipboard = sublime.get_clipboard()
+        def on_post_diff_tool(from_file, to_file):
+            self.update_view(self.view, edit, from_file)
+            sublime.set_clipboard(self.get_content_from_file(to_file))
+
+        kwargs.update({'post_diff_tool': on_post_diff_tool})
         self.run_diff(self.diff_content(self.view), clipboard,
             from_file=from_file,
             to_file='(clipboard)',
@@ -264,6 +301,10 @@ class FileDiffSelectionsCommand(FileDiffCommand):
 
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
+        def on_post_diff_tool(from_file, to_file):
+            self.update_view(self.view, edit, to_file)
+
+        kwargs.update({'post_diff_tool': on_post_diff_tool})
         self.run_diff(self.read_file(self.view.file_name()), self.diff_content(self.view),
             from_file=self.view.file_name(),
             to_file=self.view.file_name() + ' (Unsaved)',
@@ -334,6 +375,7 @@ class FileDiffTabCommand(FileDiffCommand):
         my_id = self.view.id()
         files = []
         contents = []
+        views = []
         untitled_count = 1
         for v in self.view.window().views():
             if v.id() != my_id:
@@ -347,9 +389,15 @@ class FileDiffTabCommand(FileDiffCommand):
                     untitled_count += 1
 
                 contents.append(this_content)
+                views.append(v)
 
         def on_done(index):
             if index > -1:
+                def on_post_diff_tool(from_file, to_file):
+                    self.update_view(self.view, edit, from_file)
+                    self.update_view(views[index], edit, to_file)
+
+                kwargs.update({'post_diff_tool': on_post_diff_tool})
                 self.run_diff(self.diff_content(self.view), contents[index],
                     from_file=self.view.file_name(),
                     to_file=files[index],
@@ -373,6 +421,11 @@ previous_view = current_view = None
 class FileDiffPreviousCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         if previous_view:
+            def on_post_diff_tool(from_file, to_file):
+                self.update_view(previous_view, edit, from_file)
+                self.update_view(current_view, edit, to_file)
+
+            kwargs.update({'post_diff_tool': on_post_diff_tool})
             self.run_diff(self.diff_content(previous_view), self.diff_content(self.view),
                 from_file=self.get_file_name(previous_view, 'untitled (Previous)'),
                 to_file=self.get_file_name(self.view, 'untitled (Current)'),
