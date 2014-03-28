@@ -250,7 +250,7 @@ class FileDiffClipboardCommand(FileDiffCommand):
             **kwargs)
 
     def is_visible(self):
-        return sublime.get_clipboard()
+        return sublime.get_clipboard() != ''
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -432,7 +432,7 @@ class FileDiffPreviousCommand(FileDiffCommand):
                 **kwargs)
 
     def is_visible(self):
-        return previous_view
+        return previous_view is not None
 
 def record_current_view(view):
     global previous_view
