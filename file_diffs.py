@@ -6,6 +6,7 @@ import sublime
 import sublime_plugin
 import difflib
 import tempfile
+import subprocess
 
 from fnmatch import fnmatch
 import codecs
@@ -164,7 +165,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 if sublime.platform() == "windows":
                     Popen(external_command)
                 else:
-                    self.view.window().run_command("exec", {"cmd": external_command})
+                    subprocess.Popen(external_command)
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
