@@ -311,7 +311,7 @@ class FileDiffSavedCommand(FileDiffCommand):
             **kwargs)
 
     def is_visible(self):
-        return self.view.file_name() and self.view.is_dirty()
+        return bool(self.view.file_name()) and self.view.is_dirty()
 
 
 class FileDiffFileCommand(FileDiffCommand):
