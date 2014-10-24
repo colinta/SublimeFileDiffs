@@ -6,7 +6,8 @@
   "labels": ["diff/merge"],
   "releases": [
     {
-      "details": "https://github.com/colinta/SublimeFileDiffs/tags"
+      "details": "https://github.com/colinta/SublimeFileDiffs/tags",
+      "sublime_text": ">=3000"
     }
   ]
 }
