@@ -142,7 +142,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     modified = False
                     with codecs.open(file_name, encoding='utf-8', mode='r') as f:
                         lines = f.readlines()
-                        lines = [line.replace("\n", "").replace("\r", "") for line in lines]
+                        lines = [line.replace("\n", '').replace("\r", '') for line in lines]
                         for line in lines:
                             trim_line = line.rstrip()
                             trim_lines.append(trim_line)
@@ -189,7 +189,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         scratch.run_command('file_diff_dummy1', {'content': diffs})
 
     def read_file(self, file_name):
-        content=""
+        content = ''
         with codecs.open(file_name, mode='U', encoding='utf-8') as f:
             content = f.read()
         return content
@@ -250,7 +250,7 @@ class FileDiffClipboardCommand(FileDiffCommand):
             **kwargs)
 
     def is_visible(self):
-        return sublime.get_clipboard() != ''
+        return bool(sublime.get_clipboard())
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -258,7 +258,7 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         indent = None
         for line in lines:
             # ignore blank lines
-            if line == '':
+            if not line:
                 continue
 
             new_indent = re.match('[ \t]*', line).group(0)
