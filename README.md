@@ -31,6 +31,10 @@ Or:
 2. clone this repo, but use the `st2` branch
 
        git clone -b st2 git@github.com:colinta/SublimeFileDiffs
+       
+       or
+       
+       git clone -b st2 https://github.com/colinta/SublimeFileDiffs.git
 
 Add External Diff Tool *(optional)*
 --------
