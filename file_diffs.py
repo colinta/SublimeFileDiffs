@@ -94,7 +94,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
         if not diffs:
-            sublime.status_message('No Difference')
+            self.view.show_popup('<span style="font-size: 10pt">No Difference</span>')
         else:
             external_command = external_diff_tool or self.settings().get('cmd')
             open_in_sublime = self.settings().get('open_in_sublime', not external_command)
