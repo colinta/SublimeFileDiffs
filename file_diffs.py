@@ -94,7 +94,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file))
 
         if not diffs:
-            if (sublime.version() < '3000'):
+            if sublime.version() < '3000':
                 sublime.status_message('No Difference')
             else:
                 self.view.show_popup('<span style="font-size: 10pt">No Difference</span>')
