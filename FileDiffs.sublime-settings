@@ -5,35 +5,40 @@
 // "cmd": ["command", "-parameter1", "-parameter2", "$file1", "$file2"]
 
 {
-	// just uncomment one of the examples
-	// or write your own command
-	// NOTE: Copy/paste example below or write your own command in: Package Settings --> FileDiffs --> Settings - User
-	// This file will be overwritten if the package is updated.
+  // just uncomment one of the examples
+  // or write your own command
+  // NOTE: Copy/paste example below or write your own command in: Package Settings --> FileDiffs --> Settings - User
+  // This file will be overwritten if the package is updated.
 
-	// The "command" argument is different depending on your system, for instance
-	// you might need to prefix /usr/local/bin, or use another explicit path.
+  // The "command" argument is different depending on your system, for instance
+  // you might need to prefix /usr/local/bin, or use another explicit path.
 
-	// opendiff (FileMerge)
-	// "cmd": ["opendiff", "$file1", "$file2"]
+  // opendiff (FileMerge)
+  // "cmd": ["opendiff", "$file1", "$file2"]
 
-	// ksdiff (Kaleidoscope)
-	// "cmd": ["ksdiff", "$file1", "$file2"]
+  // ksdiff (Kaleidoscope)
+  // "cmd": ["ksdiff", "$file1", "$file2"]
 
-	// "open_in_sublime": false
-	// twdiff (Textwrangler)
-	// "cmd": ["twdiff", "$file1", "$file2"]
+  // "open_in_sublime": false
+  // twdiff (Textwrangler)
+  // "cmd": ["twdiff", "$file1", "$file2"]
 
-	// bbdiff (BBEdit) NOTE: Use example below if you receive error.
-	// "cmd": ["bbdiff", "$file1", "$file2"]
+  // bbdiff (BBEdit) NOTE: Use example below if you receive error.
+  // "cmd": ["bbdiff", "$file1", "$file2"]
 
-	// bbdiff (BBEdit)
-	// "cmd" ["/usr/local/bin/bbdiff", "$file1", "$file2"]
+  // bbdiff (BBEdit)
+  // "cmd" ["/usr/local/bin/bbdiff", "$file1", "$file2"]
 
-	// deltawalker (DeltaWalker)
-	// "cmd": ["deltawalker", "-nosplash", "$file1", "$file2"]
+  // deltawalker (DeltaWalker)
+  // "cmd": ["deltawalker", "-nosplash", "$file1", "$file2"]
 
-	// "trim_trailing_white_space_before_diff": false
-	// "expand_full_file_name_in_tab": false
-	// "apply_tempfile_changes_after_diff_tool": false
-	// "limit": 1000
+  // bcomp (Beyond Compare)
+  // Install Beyond Compare Command Line Tools:
+  // Beyond Compare > Install Command Line Tools
+  "cmd": ["/usr/local/bin/bcomp",  "$file1", "$file2"]
+
+  // "trim_trailing_white_space_before_diff": false
+  // "expand_full_file_name_in_tab": false
+  // "apply_tempfile_changes_after_diff_tool": false
+  // "limit": 1000
 }
