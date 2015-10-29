@@ -35,7 +35,7 @@
   // bcomp (Beyond Compare)
   // Install Beyond Compare Command Line Tools:
   // Beyond Compare > Install Command Line Tools
-  "cmd": ["/usr/local/bin/bcomp",  "$file1", "$file2"]
+  // "cmd": ["/usr/local/bin/bcomp",  "$file1", "$file2"]
 
   // "trim_trailing_white_space_before_diff": false
   // "expand_full_file_name_in_tab": false
