@@ -88,6 +88,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
     def run_diff(self, a, b, from_file, to_file, **options):
         external_diff_tool = options.get('cmd')
 
+        if options.get('reverse'):
+            from_file, to_file = to_file, from_file
+            a, b = b, a
+
         (from_content, from_file) = self.prep_content(a, from_file, 'from_file')
         (to_content, to_file) = self.prep_content(b, to_file, 'to_file')
 
