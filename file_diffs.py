@@ -36,6 +36,10 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
             for item in menu_items:
                 item['text'] = item['text'].replace('Diff file', 'Diff selection')
 
+        if cmd is not None:
+            for item in menu_items:
+                item['text'] += ' (' + os.path.splitext(os.path.basename(cmd[0]))[0] + ')'
+
         if not (self.view.file_name() and self.view.is_dirty()):
             menu_items.remove(SAVED)
 
