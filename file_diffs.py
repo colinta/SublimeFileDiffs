@@ -21,7 +21,7 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
     SAVED = 'Diff file with Saved'
     FILE = u'Diff file with File in Project…'
     TAB = u'Diff file with Open Tab…'
-    PREVIOUS = 'Diff file with Previous window'
+    PREVIOUS = 'Diff file with Previous Tab'
 
     FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
 
