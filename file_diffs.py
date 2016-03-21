@@ -16,45 +16,38 @@ if sublime.platform() == "windows":
 
 
 class FileDiffMenuCommand(sublime_plugin.TextCommand):
-    CLIPBOARD = 'Diff file with Clipboard'
-    SELECTIONS = 'Diff Selections'
-    SAVED = 'Diff file with Saved'
-    FILE = u'Diff file with File in Project…'
-    TAB = u'Diff file with Open Tab…'
-    PREVIOUS = 'Diff file with Previous window'
-
-    FILE_DIFFS = [CLIPBOARD, SAVED, FILE, TAB, PREVIOUS]
-
     def run(self, edit, cmd=None):
-        menu_items = self.FILE_DIFFS[:]
-        saved = self.SAVED
-        non_empty_regions = [region for region in self.view.sel() if not region.empty()]
-        if len(non_empty_regions) == 2:
-            menu_items.insert(1, self.SELECTIONS)
-        elif len(non_empty_regions):
-            menu_items = [f.replace('Diff file', 'Diff selection') for f in menu_items]
-            saved = saved.replace('Diff file', 'Diff selection')
+        # Individual menu items.
+        CLIPBOARD   = {'text': 'Diff file with Clipboard',          'command' : 'file_diff_clipboard'}
+        SELECTIONS  = {'text': 'Diff Selections',                   'command' : 'file_diff_selections'}
+        SAVED       = {'text': 'Diff file with Saved',              'command' : 'file_diff_saved'}
+        FILE        = {'text': u'Diff file with File in Project…',  'command' : 'file_diff_file'}
+        TAB         = {'text': u'Diff file with Open Tab…',         'command' : 'file_diff_tab'}
+        PREVIOUS    = {'text': 'Diff file with Previous Tab',       'command' : 'file_diff_previous'}
+
+        menu_items = [CLIPBOARD, SELECTIONS, SAVED, FILE, TAB, PREVIOUS]
+
+        non_empty_regions = len([region for region in self.view.sel() if not region.empty()])
+
+        if non_empty_regions != 2:
+            menu_items.remove(SELECTIONS)
+
+        if non_empty_regions and non_empty_regions != 2:
+            for item in menu_items:
+                item['text'] = item['text'].replace('Diff file', 'Diff selection')
+
+        if cmd is not None:
+            for item in menu_items:
+                item['text'] += ' (' + os.path.splitext(os.path.basename(cmd[0]))[0] + ')'
 
         if not (self.view.file_name() and self.view.is_dirty()):
-            menu_items.remove(saved)
+            menu_items.remove(SAVED)
 
         def on_done(index):
-            restored_menu_items = [f.replace('Diff selection', 'Diff file') for f in menu_items]
-            if index == -1:
-                return
-            elif restored_menu_items[index] == self.CLIPBOARD:
-                self.view.run_command('file_diff_clipboard', {'cmd': cmd})
-            elif restored_menu_items[index] == self.SELECTIONS:
-                self.view.run_command('file_diff_selections', {'cmd': cmd})
-            elif restored_menu_items[index] == self.SAVED:
-                self.view.run_command('file_diff_saved', {'cmd': cmd})
-            elif restored_menu_items[index] == self.FILE:
-                self.view.run_command('file_diff_file', {'cmd': cmd})
-            elif restored_menu_items[index] == self.TAB:
-                self.view.run_command('file_diff_tab', {'cmd': cmd})
-            elif restored_menu_items[index] == self.PREVIOUS:
-                self.view.run_command('file_diff_previous', {'cmd': cmd})
-        self.view.window().show_quick_panel(menu_items, on_done)
+            if index >= 0:
+                self.view.run_command(menu_items[index]['command'], {'cmd': cmd})
+
+        self.view.window().show_quick_panel([item['text'] for item in menu_items], on_done)
 
 
 class FileDiffCommand(sublime_plugin.TextCommand):
