@@ -3,6 +3,16 @@ FileDiffs Plugin
 
 Shows diffs between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes. Can be configured to show diffs in an external diff tool
 
+## Preview
+
+![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_1.png)
+
+![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_2.png)
+
+![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_3.png)
+
+--------------
+
 Help!
 -----
 
@@ -31,9 +41,9 @@ Or:
 2. clone this repo, but use the `st2` branch
 
        git clone -b st2 git@github.com:colinta/SublimeFileDiffs
-       
+
        or
-       
+
        git clone -b st2 https://github.com/colinta/SublimeFileDiffs.git
 
 Add External Diff Tool *(optional)*
