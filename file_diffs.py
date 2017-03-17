@@ -51,8 +51,16 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 
 
 class FileDiffCommand(sublime_plugin.TextCommand):
-    def settings(self):
-        return sublime.load_settings('FileDiffs.sublime-settings')
+    def get_setting(self, key, default=None):
+        settings = sublime.load_settings('FileDiffs.sublime-settings')
+        os_specific_settings = {}
+        if sublime.platform() == 'windows':
+            os_specific_settings = sublime.load_settings('FileDiffs (Windows).sublime-settings')
+        elif sublime.platform() == 'osx':
+            os_specific_settings = sublime.load_settings('FileDiffs (OSX).sublime-settings')
+        else:
+            os_specific_settings = sublime.load_settings('FileDiffs (Linux).sublime-settings')
+        return os_specific_settings.get(key, settings.get(key, default))
 
     def diff_content(self, view):
         content = ''
@@ -72,7 +80,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             file_name = default_name
         content = [line.replace("\r\n", "\n").replace("\r", "\n") for line in content]
 
-        trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
+        trim_trailing_white_space_before_diff = self.get_setting('trim_trailing_white_space_before_diff', False)
         if trim_trailing_white_space_before_diff:
             content = [line.rstrip() for line in content]
 
@@ -96,8 +104,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             else:
                 self.view.show_popup('<span style="font-size: 10pt">No Difference</span>')
         else:
-            external_command = external_diff_tool or self.settings().get('cmd')
-            open_in_sublime = self.settings().get('open_in_sublime', not external_command)
+            external_command = external_diff_tool or self.get_setting('cmd')
+            open_in_sublime = self.get_setting('open_in_sublime', not external_command)
 
             if external_command:
                 self.diff_with_external(external_command, a, b, from_file, to_file, **options)
@@ -135,7 +143,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(b)
 
-            trim_trailing_white_space_before_diff = self.settings().get('trim_trailing_white_space_before_diff', False)
+            trim_trailing_white_space_before_diff = self.get_setting('trim_trailing_white_space_before_diff', False)
             if trim_trailing_white_space_before_diff:
                 def trim_trailing_white_space(file_name):
                     trim_lines = []
@@ -162,12 +170,13 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             if os.path.exists(from_file):
                 external_command = [c.replace('$file1', from_file) for c in external_command]
                 external_command = [c.replace('$file2', to_file) for c in external_command]
+                external_command = [os.path.expandvars(c) for c in external_command]
                 if sublime.platform() == "windows":
                     Popen(external_command)
                 else:
                     subprocess.Popen(external_command)
 
-                apply_tempfile_changes_after_diff_tool = self.settings().get('apply_tempfile_changes_after_diff_tool', False)
+                apply_tempfile_changes_after_diff_tool = self.get_setting('apply_tempfile_changes_after_diff_tool', False)
                 post_diff_tool = options.get('post_diff_tool')
                 if apply_tempfile_changes_after_diff_tool and post_diff_tool is not None and (not from_file_exists or not to_file_exists):
                     if from_file_exists:
@@ -344,11 +353,11 @@ class FileDiffFileCommand(FileDiffCommand):
 
     def find_files(self, folders, ret=[]):
         # Cannot access these settings!!  WHY!?
-        # folder_exclude_patterns = self.view.settings().get('folder_exclude_patterns')
-        # file_exclude_patterns = self.view.settings().get('file_exclude_patterns')
+        # folder_exclude_patterns = self.view.get_setting('folder_exclude_patterns')
+        # file_exclude_patterns = self.view.get_setting('file_exclude_patterns')
         folder_exclude_patterns = [".svn", ".git", ".hg", "CVS"]
         file_exclude_patterns = ["*.pyc", "*.pyo", "*.exe", "*.dll", "*.obj", "*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", ".DS_Store", "*.class", "*.psd", "*.db"]
-        max_files = self.settings().get('limit', 1000)
+        max_files = self.get_setting('limit', 1000)
 
         for folder in folders:
             if not os.path.isdir(folder):
@@ -406,7 +415,7 @@ class FileDiffTabCommand(FileDiffCommand):
         if len(files) == 1:
             on_done(0)
         else:
-            if self.settings().get('expand_full_file_name_in_tab', False):
+            if self.get_setting('expand_full_file_name_in_tab', False):
                 menu_items = [[os.path.basename(f),f] for f in files]
             else:
                 menu_items = [os.path.basename(f) for f in files]
