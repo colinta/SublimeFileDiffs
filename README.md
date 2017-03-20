@@ -5,11 +5,11 @@ Shows diffs between the current file, or selection(s) in the current file, and c
 
 ## Preview
 
-![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_1.png)
+![Preview](https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_1.png)
 
-![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_2.png)
+![Preview](https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_2.png)
 
-![Preview] (https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_3.png)
+![Preview](https://github.com/ildarkhasanshin/SublimeFileDiffs/raw/master/preview_3.png)
 
 --------------
 
@@ -56,6 +56,11 @@ Add External Diff Tool *(optional)*
 2. Uncomment one of the examples or write your own command to open external diff tool.
 
    This command *may* need to be a full path (e.g. `/usr/local/bin/ksdiff`), if the command isn't in your `PATH`.
+
+It supports:
+
+-   A generic setting `FileDiffs.sublime-settings` which could be overloaded for each parameter in a platform specific configuration `FileDiffs ($platform).sublime-settings` in the `Settings - User`
+-   Environment variable expansions for `cmd` parameter in the settings
 
 
 Commands
