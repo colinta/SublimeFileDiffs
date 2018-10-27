@@ -252,7 +252,8 @@ class FileDiffClipboardCommand(FileDiffCommand):
             self.update_view(self.view, edit, from_file)
             sublime.set_clipboard(self.get_content_from_file(to_file))
 
-        kwargs.update({'post_diff_tool': on_post_diff_tool})
+        reverse = kwargs.get('reverse') or self.get_setting('reverse_clipboard', False)
+        kwargs.update({'post_diff_tool': on_post_diff_tool, 'reverse': reverse})
         self.run_diff(self.diff_content(self.view), clipboard,
             from_file=from_file,
             to_file='(clipboard)',
