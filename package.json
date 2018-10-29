@@ -7,7 +7,7 @@
   "releases": [
     {
       "details": "https://github.com/colinta/SublimeFileDiffs/tags",
-      "sublime_text": "*"
+      "sublime_text": ">=3000"
     }
   ]
 }
