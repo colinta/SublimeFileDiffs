@@ -23,17 +23,43 @@ Check the [wiki][] for more tips
 Installation
 ------------
 
-1. Using Package Control, install "FileDiffs"
+### Package Control (Easiest)
 
-Or:
+1. Using Package Control, install `FileDiffs`
+
+2. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
+
+### Sublime Text 3
 
 1. Open the Sublime Text Packages folder
-    - OS X: ~/Library/Application Support/Sublime Text 3/Packages/
-    - Windows: %APPDATA%/Sublime Text 3/Packages/
-    - Linux: ~/.Sublime Text 3/Packages/ or ~/.config/sublime-text-3/Packages
+    - OS X: `~/Library/Application Support/Sublime Text 3/Packages/`
+    - Windows: `%APPDATA%/Sublime Text 3/Packages/`
+    - Linux: `~/.Sublime Text 3/Packages/` or `~/.config/sublime-text-3/Packages`
 
-2. clone this repo
+2. Clone this repo
+
+    ```
+    # Over SSH
+    git clone git@github.com:colinta/SublimeFileDiffs
+
+    # Over HTTPS
+    git clone https://github.com/colinta/SublimeFileDiffs.git
+    ```
+
 3. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
+
+### Sublime Text 2
+
+1. Open the Sublime Text 2 Packages folder
+2. Clone this repo, but use the `st2` branch
+
+    ```
+    # Over SSH
+    git clone -b st2 git@github.com:colinta/SublimeFileDiffs
+
+    # Over HTTPS
+    git clone -b st2 https://github.com/colinta/SublimeFileDiffs.git
+    ```
 
 Add External Diff Tool *(optional)*
 --------
