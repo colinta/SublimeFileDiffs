@@ -27,6 +27,8 @@ Installation
 
 1. Using Package Control, install `FileDiffs`
 
+2. Install keymaps for the commands (see Example.sublime-keymap for my preferred keys)
+
 ### Sublime Text 3
 
 1. Open the Sublime Text Packages folder
