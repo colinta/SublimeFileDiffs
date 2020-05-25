@@ -129,7 +129,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     from_file_on_disk = True
 
             if not from_file_on_disk:
-                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                 from_file = tmp_file.name
                 tmp_file.close()
 
@@ -137,7 +137,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                     tmp_file.write(a)
 
             if not to_file_on_disk:
-                tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
 
@@ -158,7 +158,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                             if trim_line != line:
                                 modified = True
                     if modified:
-                        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+                        tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                         file_name = tmp_file.name
                         tmp_file.close()
                         with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
