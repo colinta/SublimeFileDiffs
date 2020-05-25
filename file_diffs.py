@@ -120,6 +120,14 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             from_file_on_disk = self.file_will_be_read_from_disk(from_file)
             to_file_on_disk = self.file_will_be_read_from_disk(to_file)
 
+            # If a dirty file is diffed against the copy on disk, we statically set
+            # `from_file_on_disk` to True; so that the diff becomes "file to temp"
+            # instead of "temp to temp".
+            if to_file == from_file + " (Unsaved)":
+                view = self.view.window().find_open_file(from_file)
+                if os.path.exists(from_file) and view and view.is_dirty():
+                    from_file_on_disk = True
+
             if not from_file_on_disk:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 from_file = tmp_file.name
