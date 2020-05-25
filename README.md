@@ -95,7 +95,7 @@ The rest of the commands do not need to be bound (accessible from the menu):
 
 `file_diff_tab`: Shows the diff of the current file or selection(s) and an open file (aka a file that has a tab).
 
-`file_diff_previous`: Shows the diff of the current file or selection(s) and the previous activated file.
+`file_diff_previous`: Shows the diff of the current file or selection(s) and the previous activated file. If a file is not saved yet, dirty buffer is used instead of reading from disk.
 
 Contributors
 ------------

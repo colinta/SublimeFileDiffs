@@ -117,17 +117,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def diff_with_external(self, external_command, a, b, from_file=None, to_file=None, **options):
         try:
-            try:
-                from_file_exists = os.path.exists(from_file)
-            except ValueError:
-                from_file_exists = False
+            from_file_on_disk = self.file_will_be_read_from_disk(from_file)
+            to_file_on_disk = self.file_will_be_read_from_disk(to_file)
 
-            try:
-                to_file_exists = os.path.exists(to_file)
-            except ValueError:
-                to_file_exists = False
-
-            if not from_file_exists:
+            if not from_file_on_disk:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 from_file = tmp_file.name
                 tmp_file.close()
@@ -135,7 +128,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(a)
 
-            if not to_file_exists:
+            if not to_file_on_disk:
                 tmp_file = tempfile.NamedTemporaryFile(delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
@@ -178,10 +171,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
                 apply_tempfile_changes_after_diff_tool = self.get_setting('apply_tempfile_changes_after_diff_tool', False)
                 post_diff_tool = options.get('post_diff_tool')
-                if apply_tempfile_changes_after_diff_tool and post_diff_tool is not None and (not from_file_exists or not to_file_exists):
-                    if from_file_exists:
+                if apply_tempfile_changes_after_diff_tool and post_diff_tool is not None and (not from_file_on_disk or not to_file_on_disk):
+                    if from_file_on_disk:
                         from_file = None
-                    if to_file_exists:
+                    if to_file_on_disk:
                         to_file = None
                     # Use a dialog to block st and wait for the closing of the diff tool
                     if sublime.ok_cancel_dialog("Apply changes from tempfile after external diff tool execution?"):
@@ -233,6 +226,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 sublime.status_message('Cannot update multiselection')
                 return
             view.replace(edit, region, self.get_content_from_file(tmp_file))
+
+    def file_will_be_read_from_disk(self, file):
+        view = self.view.window().find_open_file(file)
+        return bool(os.path.exists(file) and not (view and view.is_dirty()))
 
 
 class FileDiffDummy1Command(sublime_plugin.TextCommand):
