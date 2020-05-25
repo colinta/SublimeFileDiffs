@@ -265,21 +265,22 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
 
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        from_file = self.get_file_name(self.view, 'untitled')
+        to_file = self.get_file_name(self.view, 'untitled')
         for region in self.view.sel():
             if not region.empty():
-                from_file += ' (Selection)'
+                to_file += ' (Selection)'
                 break
         clipboard = sublime.get_clipboard()
         def on_post_diff_tool(from_file, to_file):
-            self.update_view(self.view, edit, from_file)
-            sublime.set_clipboard(self.get_content_from_file(to_file))
+            self.update_view(self.view, edit, to_file)
+            sublime.set_clipboard(self.get_content_from_file(from_file))
 
         reverse = kwargs.get('reverse') or self.get_setting('reverse_clipboard', False)
         kwargs.update({'post_diff_tool': on_post_diff_tool, 'reverse': reverse})
-        self.run_diff(self.diff_content(self.view), clipboard,
-            from_file=from_file,
-            to_file='(clipboard)',
+
+        self.run_diff(clipboard, self.diff_content(self.view),
+            from_file='(clipboard)',
+            to_file=to_file,
             **kwargs)
 
     def is_visible(self):

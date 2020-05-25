@@ -41,4 +41,7 @@
   // "expand_full_file_name_in_tab": false
   // "apply_tempfile_changes_after_diff_tool": false
   // "limit": 1000
+
+  // Reverses "diff with clipboard" direction.
+  // "reverse_clipboard": true,
 }
