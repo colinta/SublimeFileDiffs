@@ -128,10 +128,13 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 if os.path.exists(from_file) and view and view.is_dirty():
                     from_file_on_disk = True
 
+            files_to_remove = []
+
             if not from_file_on_disk:
                 tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                 from_file = tmp_file.name
                 tmp_file.close()
+                files_to_remove.append(tmp_file.name)
 
                 with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(a)
@@ -140,6 +143,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                 to_file = tmp_file.name
                 tmp_file.close()
+                files_to_remove.append(tmp_file.name)
 
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
                     tmp_file.write(b)
@@ -161,6 +165,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                         tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
                         file_name = tmp_file.name
                         tmp_file.close()
+                        files_to_remove.append(tmp_file.name)
                         with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
                             f.writelines('\n'.join(trim_lines))
                     return file_name
@@ -190,6 +195,15 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
             sublime.status_message(str(e))
+
+        finally:
+            def remove_files():
+                for file in files_to_remove:
+                    os.remove(file)
+
+            # Remove temp files after 15 seconds. We don't remove immediately,
+            # because external diff tools may take some time to read them from disk.
+            sublime.set_timeout_async(remove_files, 15000)
 
     def diff_in_sublime(self, diffs):
         diffs = ''.join(diffs)
