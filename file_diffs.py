@@ -251,7 +251,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def file_will_be_read_from_disk(self, file):
         view = self.view.window().find_open_file(file)
-        return bool(os.path.exists(file) and not (view and view.is_dirty()) and not (view and self.view_has_a_selection(view)))
+        return os.path.exists(file) and not (view and view.is_dirty()) and not (view and self.view_has_a_selection(view))
 
     def view_has_a_selection(self, view):
         """Checks if it has exactly one non-empty selection."""
