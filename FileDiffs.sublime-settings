@@ -44,4 +44,7 @@
 
   // Reverses "diff with clipboard" direction.
   // "reverse_clipboard": true,
+
+  // Number of context lines. Defaults to 3. For full context, set it as "full".
+  // "context_lines": 3,
 }
