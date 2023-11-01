@@ -104,7 +104,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file, n=context_lines))
 
         if not diffs:
-            sublime.status_message('No Difference')
+            self.view.show_popup('No Difference')
 
         else:
             external_command = external_diff_tool or self.get_setting('cmd')
@@ -197,7 +197,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                         post_diff_tool(from_file, to_file)
         except Exception as e:
             # some basic logging here, since we are cluttering the /tmp folder
-            sublime.status_message(str(e))
+            self.view.show_popup(str(e))
 
         finally:
             def remove_files():
@@ -248,7 +248,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             elif nb_non_empty_regions == 1:
                 region = non_empty_regions[0]
             else:
-                sublime.status_message('Cannot update multiselection')
+                self.view.show_popup('Cannot update multiselection')
                 return
             view.replace(edit, region, self.get_content_from_file(tmp_file))
 
@@ -402,7 +402,7 @@ class FileDiffFileCommand(FileDiffCommand):
                     if not len([True for pattern in file_exclude_patterns if fnmatch(f, pattern)]):
                         ret.append(fullpath)
                 if len(ret) >= max_files:
-                    sublime.status_message('Too many files to include all of them in this list')
+                    self.view.show_popup('Too many files to include all of them in this list')
                     return ret
         return ret
 
