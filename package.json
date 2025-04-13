@@ -1,15 +1,15 @@
 {
   "name": "FileDiffs",
+  "details": "https://github.com/colinta/SublimeFileDiffs",
   "description": "Shows diffs between the current file, or selection(s) in the current file, and clipboard, another file, or unsaved changes.  With contributions from Sebastian Pape (spape) and Jiri Urban (jiriurban)",
   "author": "Colin T.A. Gray (colinta)",
-  "details": "https://github.com/colinta/SublimeFileDiffs",
   "labels": [
     "diff/merge"
   ],
   "releases": [
     {
-      "tags": true,
-      "sublime_text": ">=3000"
+      "sublime_text": ">=3000",
+      "tags": true
     }
   ]
 }
