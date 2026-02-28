@@ -47,4 +47,7 @@
 
   // Number of context lines. Defaults to 3. For full context, set it as "full".
   // "context_lines": 3,
+
+  // Set to false to hide all FileDiffs items from context menus.
+  // "show_context_menu": true,
 }
