@@ -202,10 +202,15 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def diff_in_sublime(self, diffs):
         diffs = ''.join(diffs)
+        global scratches
+        global do_not_record
+        do_not_record = True
         scratch = self.view.window().new_file()
+        scratches.add(scratch.id())
         scratch.set_scratch(True)
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
         scratch.run_command('file_diff_dummy1', {'content': diffs})
+        do_not_record = False
 
     def read_file(self, file_name):
         content = ''
@@ -457,6 +462,8 @@ class FileDiffTabCommand(FileDiffCommand):
 
 
 previous_view = current_view = None
+do_not_record = False
+scratches = set()
 
 class FileDiffPreviousCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
@@ -477,6 +484,11 @@ class FileDiffPreviousCommand(FileDiffCommand):
         return previous_view is not None
 
 def record_current_view(view):
+    if do_not_record:
+        return
+    settings = view.settings()
+    if view.id() in scratches:
+        return
     global previous_view
     global current_view
     previous_view = current_view
@@ -493,6 +505,10 @@ class FileDiffListener(sublime_plugin.EventListener):
                 record_current_view(view)
         except AttributeError:
             pass
+
+    def on_close(self, view):
+        if view.id() in scratches:
+            scratches.remove(view.id())
 
 
 def get_setting(key, default=None):
