@@ -67,6 +67,28 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = view.substr(sublime.Region(0, view.size()))
         return content
 
+    def get_buffer_line_endings(self):
+        """Detect buffer line ending."""
+        line_sep = self.view.line_endings()
+        if line_sep == 'CR':
+            return '\r'
+        elif line_sep == 'Unix':
+            return '\n'
+        elif line_sep == 'Windows':
+            return '\r\n'
+
+        return os.linesep
+
+    def set_line_endings(self, content, line_ending):
+        """Normalize all line endings in content to specified line ending."""
+        if not line_ending:
+            return content
+        # First normalize to LF, then convert to target
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+        if line_ending != '\n':
+            content = content.replace('\n', line_ending)
+        return content
+
     def prep_content(self, ab, file_name, default_name):
         content = ab.splitlines(True)
         if file_name is None:
@@ -132,7 +154,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 files_to_remove.append(tmp_file.name)
 
                 with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
-                    tmp_file.write(a)
+                    a_tmp = self.set_line_endings(a, self.get_buffer_line_endings())
+                    tmp_file.write(a_tmp)
 
             if not to_file_on_disk:
                 tmp_file = tempfile.NamedTemporaryFile(dir = sublime.packages_path(), prefix = "file-diffs-", suffix = ".temp", delete=False)
@@ -141,7 +164,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 files_to_remove.append(tmp_file.name)
 
                 with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
-                    tmp_file.write(b)
+                    b_tmp = self.set_line_endings(b, self.get_buffer_line_endings())
+                    tmp_file.write(b_tmp)
 
             trim_trailing_white_space_before_diff = get_setting('trim_trailing_white_space_before_diff', False)
             if trim_trailing_white_space_before_diff:
