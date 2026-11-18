@@ -5,6 +5,16 @@
 // "cmd": ["command", "-parameter1", "-parameter2", "$file1", "$file2"]
 
 {
+  // Highlight changed words in the built-in diff view (Sublime Text 4, build 4096+).
+  "word_diff": false,
+
+  // Each pair accepts optional "background" and "foreground" values in #RGB
+  // or #RRGGBB. Omitted colors come from the active color scheme.
+  "word_diff_colors": {
+    "deleted": {"line": {}, "word": {}},
+    "inserted": {"line": {}, "word": {}}
+  },
+
   // just uncomment one of the examples
   // or write your own command
   // NOTE: Copy/paste example below or write your own command in: Package Settings --> FileDiffs --> Settings - User

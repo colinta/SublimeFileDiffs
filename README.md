@@ -65,6 +65,13 @@ The rest of the commands do not need to be bound (accessible from the menu):
 
 If FileDiffs has to use temporary files, they are created in your `Data/Packages` folder (rather than system temp folder) due to privacy concerns for portable Sublime Text installations. Temporary files are automatically removed after 15 seconds.
 
+Word-level highlighting *(optional)*
+-----------------------------------
+
+On Sublime Text 4 (build 4096+), set `"word_diff": true` in **Package Settings > FileDiffs > Settings** to highlight changed words in the built-in diff view. Added and removed lines get a soft tint, with a stronger fill on the words and punctuation that changed. A whole added or removed block gets the line tint.
+
+The colors follow the active color scheme. To override one color, set the corresponding field in `word_diff_colors`, such as `inserted.word.background`. The four pairs are `deleted.line`, `deleted.word`, `inserted.line`, and `inserted.word`. Each accepts independent `background` and `foreground` values in `#RGB` or `#RRGGBB`. Omitted fields keep their automatic colors.
+
 Key Bindings
 ------------
 
