@@ -10,7 +10,6 @@ import tempfile
 import subprocess
 
 from fnmatch import fnmatch
-import codecs
 
 if sublime.platform() == "windows":
     from subprocess import Popen
@@ -153,7 +152,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 tmp_file.close()
                 files_to_remove.append(tmp_file.name)
 
-                with codecs.open(from_file, encoding='utf-8', mode='w+') as tmp_file:
+                with open(from_file, mode='w+', encoding='utf-8', newline='') as tmp_file:
                     a_tmp = self.set_line_endings(a, self.get_buffer_line_endings())
                     tmp_file.write(a_tmp)
 
@@ -163,7 +162,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 tmp_file.close()
                 files_to_remove.append(tmp_file.name)
 
-                with codecs.open(to_file, encoding='utf-8', mode='w+') as tmp_file:
+                with open(to_file, mode='w+', encoding='utf-8', newline='') as tmp_file:
                     b_tmp = self.set_line_endings(b, self.get_buffer_line_endings())
                     tmp_file.write(b_tmp)
 
@@ -172,8 +171,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                 def trim_trailing_white_space(file_name):
                     trim_lines = []
                     modified = False
-                    with codecs.open(file_name, encoding='utf-8', mode='r') as f:
-                        lines = f.readlines()
+                    with open(file_name, mode='r', encoding='utf-8', newline='') as f:
+                        lines = f.read().splitlines(True)
                         lines = [line.replace("\n", '').replace("\r", '') for line in lines]
                         for line in lines:
                             trim_line = line.rstrip()
@@ -185,7 +184,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
                         file_name = tmp_file.name
                         tmp_file.close()
                         files_to_remove.append(tmp_file.name)
-                        with codecs.open(file_name, encoding='utf-8', mode='w+') as f:
+                        with open(file_name, mode='w+', encoding='utf-8', newline='') as f:
                             f.writelines('\n'.join(trim_lines))
                     return file_name
 
@@ -238,7 +237,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def read_file(self, file_name):
         content = ''
-        with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+        with open(file_name, mode='r', encoding='utf-8', newline='') as f:
             content = f.read()
         return content
 
@@ -253,8 +252,8 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         return file_name
 
     def get_content_from_file(self, file_name):
-        with codecs.open(file_name, encoding='utf-8', mode='r') as f:
-            lines = f.readlines()
+        with open(file_name, mode='r', encoding='utf-8', newline='') as f:
+            lines = f.read().splitlines(True)
             lines = [line.replace("\r\n", "\n").replace("\r", "\n") for line in lines]
             content = ''.join(lines)
             return content
