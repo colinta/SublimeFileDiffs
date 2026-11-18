@@ -1,0 +1,15 @@
+%YAML 1.2
+---
+name: FileDiffs
+scope: source.diff.filediffs
+version: 2
+hidden: true
+extends: Packages/Diff/Diff.sublime-syntax
+
+# The plugin applies added and removed line colors as regions.
+contexts:
+  line-deleted:
+    - include: pop-eol
+    - include: trailing-whitespace
+  line-inserted:
+    - include: line-deleted
