@@ -238,7 +238,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def read_file(self, file_name):
         content = ''
-        with codecs.open(file_name, mode='U', encoding='utf-8') as f:
+        with open(file_name, mode='r', encoding='utf-8') as f:
             content = f.read()
         return content
 
