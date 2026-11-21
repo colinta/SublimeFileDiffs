@@ -72,6 +72,13 @@ On Sublime Text 4 (build 4096+), set `"word_diff": true` in **Package Settings >
 
 The colors follow the active color scheme. To override one color, set the corresponding field in `word_diff_colors`, such as `inserted.word.background`. The four pairs are `deleted.line`, `deleted.word`, `inserted.line`, and `inserted.word`. Each accepts independent `background` and `foreground` values in `#RGB` or `#RRGGBB`. Omitted fields keep their automatic colors.
 
+<details>
+<summary>Preview in dark and light color schemes</summary>
+
+![Word-level highlighting in Mariana and Breakers](preview_word_diff.png)
+
+</details>
+
 Key Bindings
 ------------
 
