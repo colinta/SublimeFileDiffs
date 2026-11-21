@@ -5,6 +5,15 @@
 // "cmd": ["command", "-parameter1", "-parameter2", "$file1", "$file2"]
 
 {
+  // Show the operands and selection scope in diff menu captions.
+  "show_diff_menu_details": false,
+
+  // For Diff with Previous, compare whole tabs if only one has a selection.
+  "ignore_unpaired_selection": false,
+
+  // Non-empty preview lines for unsaved tabs in Diff with Open Tab. Use 0 to hide them.
+  "open_tab_preview_lines": 1,
+
   // just uncomment one of the examples
   // or write your own command
   // NOTE: Copy/paste example below or write your own command in: Package Settings --> FileDiffs --> Settings - User
