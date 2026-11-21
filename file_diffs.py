@@ -11,6 +11,7 @@ import subprocess
 
 from fnmatch import fnmatch
 from html import escape
+from itertools import accumulate
 import codecs
 
 if sublime.platform() == "windows":
@@ -120,7 +121,13 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file, n=context_lines))
 
         if not diffs:
-            self.view.show_popup('No Difference')
+            if options.get('saved_selection'):
+                if self.set_line_endings(a, '\n') != self.set_line_endings(b, '\n'):
+                    self.view.show_popup('Only ignored trailing whitespace differs in the selection')
+                else:
+                    self.view.show_popup('No difference in the selected text')
+            else:
+                self.view.show_popup('No Difference')
 
         else:
             external_command = external_diff_tool or get_setting('cmd')
@@ -377,22 +384,112 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         return len(self.view.sel()) > 1
 
 
+SAVED_SELECTION_TOKEN = re.compile(r"\w+(?:['’]\w+)*|[^\S\r\n]+|\r\n|[\r\n]|[^\w\s]")
+
+
+def selection_diff_blocks(before, after, before_start=0, after_start=0, autojunk=True):
+    before_offsets = [before_start] + [before_start + offset for offset in accumulate(map(len, before))]
+    after_offsets = [after_start] + [after_start + offset for offset in accumulate(map(len, after))]
+    matcher = difflib.SequenceMatcher(None, before, after, autojunk=autojunk)
+    return [(kind, before_offsets[a], before_offsets[b], after_offsets[c], after_offsets[d])
+            for kind, a, b, c, d in matcher.get_opcodes()]
+
+
+def saved_selection_text(saved, current, ranges):
+    """Project current buffer ranges onto the saved text using matching lines and tokens."""
+    if ranges == [(0, len(current))]:
+        return saved
+
+    blocks = selection_diff_blocks(saved.splitlines(True), current.splitlines(True))
+    detailed_blocks = {}
+    included_deletions = set()
+
+    def includes_deletion(start, end, point, depth):
+        if start < point < end:
+            return True
+        if depth:
+            return False
+
+        # A whole-line deletion has no width in the buffer. Include it when
+        # the selection starts on the following full line or covers the line
+        # break immediately before it. A partial text selection stays strict.
+        if start == point and (point == 0 or current[point - 1] == '\n'):
+            line_end = current.find('\n', point)
+            return end >= (len(current) if line_end < 0 else line_end)
+
+        if point == end and point > 0 and current[point - 1] == '\n':
+            line_start = current.rfind('\n', 0, point - 1) + 1
+            return start <= line_start
+
+        if point == len(current) and current.endswith('\n') and end == point - 1:
+            return start <= current.rfind('\n', 0, end) + 1
+        return False
+
+    def project(start, end, spans, depth=0):
+        for block in spans:
+            kind, a, b, c, d = block
+            left, right = max(start, c), min(end, d)
+            if kind == 'delete' and (a, b) not in included_deletions and includes_deletion(start, end, c, depth):
+                included_deletions.add((a, b))
+                # Keep the separator before deleted final lines when the
+                # selection ends just before the buffer's final newline.
+                first = a - 1 if depth == 0 and c == len(current) and end < c and saved[a - 1:a] == '\n' else a
+                yield saved[first:b]
+            if left >= right or kind == 'insert':
+                continue
+            if left == c and right == d:
+                yield saved[a:b]
+            elif kind == 'replace' and depth < 2:
+                key = (depth, block)
+                if key not in detailed_blocks:
+                    before, after = saved[a:b], current[c:d]
+                    if depth == 0:
+                        before, after = SAVED_SELECTION_TOKEN.findall(before), SAVED_SELECTION_TOKEN.findall(after)
+                    detailed_blocks[key] = selection_diff_blocks(before, after, a, c,
+                        autojunk=len(before) * len(after) > 1000000)
+                yield from project(start, end, detailed_blocks[key], depth + 1)
+            else:
+                # Matching text maps one-to-one. Inside an unmatched replacement,
+                # project partial boundaries monotonically onto its saved span.
+                first = a + (left - c) * (b - a) // (d - c)
+                last = a + (right - c) * (b - a) // (d - c)
+                yield saved[first:last]
+
+    return ''.join(part for start, end in ranges for part in project(start, end, blocks))
+
+
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
+        view = self.view
+        file_name = view.file_name()
+        with open(file_name, encoding='utf-8') as saved_file:
+            saved = saved_file.read()
+        current = self.diff_content(view, use_selection=False)
+        selections = [region for region in view.sel() if not region.empty()]
+        from_name, to_name = file_name, file_name + ' (Unsaved)'
+        revision = view.change_count()
+        reverse = kwargs.get('reverse', False)
+
+        if selections:
+            ranges = [(region.begin(), region.end()) for region in selections]
+            saved = saved_selection_text(saved, current, ranges)
+            current = ''.join(current[start:end] for start, end in ranges)
+            from_name, to_name = file_name + ' (Saved selection)', file_name + ' (Unsaved selection)'
+            kwargs['force_temp_files'] = True
+            kwargs['saved_selection'] = True
+
         def on_post_diff_tool(from_file, to_file):
-            self.update_view(self.view, to_file)
+            edited_file = from_file if reverse else to_file
+            if edited_file and view.is_valid() and view.change_count() == revision:
+                self.update_view(view, edited_file, selections=selections)
 
         kwargs.update({'post_diff_tool': on_post_diff_tool})
-        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(self.view),
-            from_file=self.view.file_name(),
-            to_file=self.view.file_name() + ' (Unsaved)',
-            **kwargs)
+        self.run_diff(saved, current, from_file=from_name, to_file=to_name, **kwargs)
 
     def is_visible(self):
         if not get_setting('show_context_menu', True):
             return False
         return bool(self.view.file_name()) and self.view.is_dirty()
-
 
     def description(self):
         return saved_diff_caption(self.view)
@@ -618,7 +715,7 @@ def clipboard_diff_caption(view):
 
 
 def saved_diff_caption(view):
-    return selection_diff_caption(view, 'Diff with Saved', 'saved file')
+    return selection_diff_caption(view, 'Diff with Saved', 'saved selection')
 
 
 def previous_diff_caption(view):
