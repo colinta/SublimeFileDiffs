@@ -65,6 +65,21 @@ The rest of the commands do not need to be bound (accessible from the menu):
 
 If FileDiffs has to use temporary files, they are created in your `Data/Packages` folder (rather than system temp folder) due to privacy concerns for portable Sublime Text installations. Temporary files are automatically removed after 15 seconds.
 
+<details>
+<summary>Tab picker and saved selection previews</summary>
+
+**Diff with Open Tab** shows a folder or a short text preview below the tab title. Set `open_tab_preview_lines` to control previews of unsaved tabs. It defaults to `1`, and `0` hides the preview.
+
+![Open tabs identified by their folders or text previews](preview_tab_picker.png)
+
+Set `show_diff_menu_details` to show the comparison operands in the menu. Set `ignore_unpaired_selection` to compare both whole tabs in **Diff with Previous** when only one has a selection.
+
+**Diff with Saved** compares the selected text with its saved counterpart. When the buffer has no selection, it compares the full file.
+
+![A selected word compared with its saved counterpart](preview_saved_selection.png)
+
+</details>
+
 Key Bindings
 ------------
 
