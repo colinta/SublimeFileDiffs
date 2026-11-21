@@ -12,6 +12,8 @@ import subprocess
 from fnmatch import fnmatch
 import codecs
 
+from . import word_diff
+
 if sublime.platform() == "windows":
     from subprocess import Popen
 
@@ -225,7 +227,7 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             sublime.set_timeout_async(remove_files, 15000)
 
     def diff_in_sublime(self, diffs):
-        diffs = ''.join(diffs)
+        lines = list(diffs)
         global scratches
         global do_not_record
         do_not_record = True
@@ -233,8 +235,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         scratches.add(scratch.id())
         scratch.set_scratch(True)
         scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-        scratch.run_command('file_diff_dummy1', {'content': diffs})
+        scratch.run_command('file_diff_dummy1', {'content': ''.join(lines)})
         do_not_record = False
+
+        if get_setting('word_diff', False) and int(sublime.version()) >= 4096:
+            word_diff.highlight(self.view, scratch, lines, get_setting('word_diff_colors', {}))
 
     def read_file(self, file_name):
         content = ''
