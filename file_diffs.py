@@ -718,6 +718,44 @@ def saved_diff_caption(view):
     return selection_diff_caption(view, 'Diff with Saved', 'saved selection')
 
 
+def compact_tab_label(label, suffix=''):
+    # Preserve the start of the label and the end of the filename.
+    limit = 36 - len(suffix)
+    if len(label) > limit:
+        start = limit // 2
+        end = limit - start - 1
+        label = label[:start] + '…' + label[-end:]
+    return label + suffix
+
+
+def previous_tab_labels(tabs):
+    paths = [tab.file_name() for tab in tabs]
+    labels = [os.path.basename(path) if path else tab.name() or 'Untitled'
+              for tab, path in zip(tabs, paths)]
+    if labels[0] == labels[1]:
+        separator = os.path.sep
+        components = [os.path.normpath(path).split(separator) if path else [] for path in paths]
+        if all(paths):
+            left, right = components
+            # Start at the filename and stop at the first differing directory.
+            for depth in range(2, max(len(left), len(right)) + 1):
+                if left[-depth:] != right[-depth:]:
+                    labels = [separator.join(parts[-depth:]) for parts in components]
+                    break
+        elif any(paths):
+            index = 0 if paths[0] else 1
+            labels[index] = separator.join(components[index][-2:])
+
+    labels = [compact_tab_label(label) for label in labels]
+    if labels[0] == labels[1]:
+        window = tabs[1].window()
+        for index, tab in enumerate(tabs):
+            group, position = window.get_view_index(tab)
+            location = ' (group {}, tab {})'.format(group + 1, position + 1)
+            labels[index] = compact_tab_label(labels[index], location)
+    return labels
+
+
 def previous_diff_caption(view):
     if not get_setting('show_diff_menu_details', False):
         return 'Diff with Previous'
@@ -727,14 +765,7 @@ def previous_diff_caption(view):
 
     pair = (previous, view)
     use_selection = use_previous_selections(*pair)
-    paths = [tab.file_name() for tab in pair]
-    labels = [os.path.basename(path) if path else tab.name() or 'Untitled' for tab, path in zip(pair, paths)]
-    if labels[0] == labels[1]:
-        labels = [path or label for path, label in zip(paths, labels)]
-        if labels[0] == labels[1]:
-            positions = [view.window().get_view_index(tab) for tab in pair]
-            labels = ['{} (group {}, tab {})'.format(label, group + 1, index + 1)
-                      for label, (group, index) in zip(labels, positions)]
+    labels = previous_tab_labels(pair)
 
     for index, tab in enumerate(pair):
         if tab.is_loading():
