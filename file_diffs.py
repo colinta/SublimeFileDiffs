@@ -10,6 +10,8 @@ import tempfile
 import subprocess
 
 from fnmatch import fnmatch
+from html import escape
+from itertools import accumulate
 import codecs
 
 if sublime.platform() == "windows":
@@ -22,12 +24,12 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, cmd=None):
         # Individual menu items.
-        CLIPBOARD   = {'text': 'Diff file with Clipboard',          'command' : 'file_diff_clipboard'}
+        CLIPBOARD   = {'text': clipboard_diff_caption(self.view),  'command' : 'file_diff_clipboard'}
         SELECTIONS  = {'text': 'Diff Selections',                   'command' : 'file_diff_selections'}
-        SAVED       = {'text': 'Diff file with Saved',              'command' : 'file_diff_saved'}
+        SAVED       = {'text': saved_diff_caption(self.view),      'command' : 'file_diff_saved'}
         FILE        = {'text': u'Diff file with File in Project…',  'command' : 'file_diff_file'}
         TAB         = {'text': u'Diff file with Open Tab…',         'command' : 'file_diff_tab'}
-        PREVIOUS    = {'text': 'Diff file with Previous Tab',       'command' : 'file_diff_previous'}
+        PREVIOUS    = {'text': previous_diff_caption(self.view),    'command' : 'file_diff_previous'}
 
         menu_items = [CLIPBOARD, SELECTIONS, SAVED, FILE, TAB, PREVIOUS]
 
@@ -55,13 +57,14 @@ class FileDiffMenuCommand(sublime_plugin.TextCommand):
 
 
 class FileDiffCommand(sublime_plugin.TextCommand):
-    def diff_content(self, view):
+    def diff_content(self, view, use_selection=True):
         content = ''
 
-        for region in view.sel():
-            if region.empty():
-                continue
-            content += view.substr(region)
+        if use_selection:
+            for region in view.sel():
+                if region.empty():
+                    continue
+                content += view.substr(region)
 
         if not content:
             content = view.substr(sublime.Region(0, view.size()))
@@ -118,7 +121,13 @@ class FileDiffCommand(sublime_plugin.TextCommand):
         diffs = list(difflib.unified_diff(from_content, to_content, from_file, to_file, n=context_lines))
 
         if not diffs:
-            self.view.show_popup('No Difference')
+            if options.get('saved_selection'):
+                if self.set_line_endings(a, '\n') != self.set_line_endings(b, '\n'):
+                    self.view.show_popup('Only ignored trailing whitespace differs in the selection')
+                else:
+                    self.view.show_popup('No difference in the selected text')
+            else:
+                self.view.show_popup('No Difference')
 
         else:
             external_command = external_diff_tool or get_setting('cmd')
@@ -134,13 +143,14 @@ class FileDiffCommand(sublime_plugin.TextCommand):
 
     def diff_with_external(self, external_command, a, b, from_file=None, to_file=None, **options):
         try:
-            from_file_on_disk = self.file_will_be_read_from_disk(from_file)
-            to_file_on_disk = self.file_will_be_read_from_disk(to_file)
+            use_disk_files = not options.get('force_temp_files', False)
+            from_file_on_disk = use_disk_files and self.file_will_be_read_from_disk(from_file)
+            to_file_on_disk = use_disk_files and self.file_will_be_read_from_disk(to_file)
 
             # If a dirty file is diffed against the copy on disk, we statically set
             # `from_file_on_disk` to True; so that the diff becomes "file to temp"
             # instead of "temp to temp".
-            if to_file == from_file + " (Unsaved)":
+            if use_disk_files and to_file == from_file + " (Unsaved)":
                 view = self.view.window().find_open_file(from_file)
                 if os.path.exists(from_file) and view and view.is_dirty():
                     from_file_on_disk = True
@@ -225,16 +235,16 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             sublime.set_timeout_async(remove_files, 15000)
 
     def diff_in_sublime(self, diffs):
-        diffs = ''.join(diffs)
-        global scratches
         global do_not_record
         do_not_record = True
-        scratch = self.view.window().new_file()
-        scratches.add(scratch.id())
-        scratch.set_scratch(True)
-        scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
-        scratch.run_command('file_diff_dummy1', {'content': diffs})
-        do_not_record = False
+        try:
+            scratch = self.view.window().new_file()
+            scratch.settings().set('filediffs_result', True)
+            scratch.set_scratch(True)
+            scratch.set_syntax_file('Packages/Diff/Diff.tmLanguage')
+            scratch.run_command('file_diff_dummy1', {'content': ''.join(diffs)})
+        finally:
+            do_not_record = False
 
     def read_file(self, file_name):
         content = ''
@@ -259,9 +269,11 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             content = ''.join(lines)
             return content
 
-    def update_view(self, view, edit, tmp_file):
+    def update_view(self, view, tmp_file, use_selection=True, selections=None):
         if tmp_file:
-            non_empty_regions = [region for region in view.sel() if not region.empty()]
+            non_empty_regions = selections
+            if non_empty_regions is None:
+                non_empty_regions = [region for region in view.sel() if not region.empty()] if use_selection else []
             nb_non_empty_regions = len(non_empty_regions)
             region = None
             if nb_non_empty_regions == 0:
@@ -271,7 +283,10 @@ class FileDiffCommand(sublime_plugin.TextCommand):
             else:
                 self.view.show_popup('Cannot update multiselection')
                 return
-            view.replace(edit, region, self.get_content_from_file(tmp_file))
+            view.run_command('file_diff_replace', {
+                'start': region.begin(), 'end': region.end(),
+                'content': self.get_content_from_file(tmp_file),
+            })
 
     def file_will_be_read_from_disk(self, file):
         view = self.view.window().find_open_file(file)
@@ -287,6 +302,11 @@ class FileDiffDummy1Command(sublime_plugin.TextCommand):
         self.view.insert(edit, 0, content)
 
 
+class FileDiffReplaceCommand(sublime_plugin.TextCommand):
+    def run(self, edit, start, end, content):
+        self.view.replace(edit, sublime.Region(start, end), content)
+
+
 class FileDiffClipboardCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
         to_file = self.get_file_name(self.view, 'untitled')
@@ -296,7 +316,7 @@ class FileDiffClipboardCommand(FileDiffCommand):
                 break
         clipboard = sublime.get_clipboard()
         def on_post_diff_tool(from_file, to_file):
-            self.update_view(self.view, edit, to_file)
+            self.update_view(self.view, to_file)
             sublime.set_clipboard(self.get_content_from_file(from_file))
 
         reverse = kwargs.get('reverse') or get_setting('reverse_clipboard', False)
@@ -311,6 +331,9 @@ class FileDiffClipboardCommand(FileDiffCommand):
         if not get_setting('show_context_menu', True):
             return False
         return bool(sublime.get_clipboard())
+
+    def description(self):
+        return clipboard_diff_caption(self.view)
 
 
 class FileDiffSelectionsCommand(FileDiffCommand):
@@ -361,21 +384,115 @@ class FileDiffSelectionsCommand(FileDiffCommand):
         return len(self.view.sel()) > 1
 
 
+SAVED_SELECTION_TOKEN = re.compile(r"\w+(?:['’]\w+)*|[^\S\r\n]+|\r\n|[\r\n]|[^\w\s]")
+
+
+def selection_diff_blocks(before, after, before_start=0, after_start=0, autojunk=True):
+    before_offsets = [before_start] + [before_start + offset for offset in accumulate(map(len, before))]
+    after_offsets = [after_start] + [after_start + offset for offset in accumulate(map(len, after))]
+    matcher = difflib.SequenceMatcher(None, before, after, autojunk=autojunk)
+    return [(kind, before_offsets[a], before_offsets[b], after_offsets[c], after_offsets[d])
+            for kind, a, b, c, d in matcher.get_opcodes()]
+
+
+def saved_selection_text(saved, current, ranges):
+    """Project current buffer ranges onto the saved text using matching lines and tokens."""
+    if ranges == [(0, len(current))]:
+        return saved
+
+    blocks = selection_diff_blocks(saved.splitlines(True), current.splitlines(True))
+    detailed_blocks = {}
+    included_deletions = set()
+
+    def includes_deletion(start, end, point, depth):
+        if start < point < end:
+            return True
+        if depth:
+            return False
+
+        # A whole-line deletion has no width in the buffer. Include it when
+        # the selection starts on the following full line or covers the line
+        # break immediately before it. A partial text selection stays strict.
+        if start == point and (point == 0 or current[point - 1] == '\n'):
+            line_end = current.find('\n', point)
+            return end >= (len(current) if line_end < 0 else line_end)
+
+        if point == end and point > 0 and current[point - 1] == '\n':
+            line_start = current.rfind('\n', 0, point - 1) + 1
+            return start <= line_start
+
+        if point == len(current) and current.endswith('\n') and end == point - 1:
+            return start <= current.rfind('\n', 0, end) + 1
+        return False
+
+    def project(start, end, spans, depth=0):
+        for block in spans:
+            kind, a, b, c, d = block
+            left, right = max(start, c), min(end, d)
+            if kind == 'delete' and (a, b) not in included_deletions and includes_deletion(start, end, c, depth):
+                included_deletions.add((a, b))
+                # Keep the separator before deleted final lines when the
+                # selection ends just before the buffer's final newline.
+                first = a - 1 if depth == 0 and c == len(current) and end < c and saved[a - 1:a] == '\n' else a
+                yield saved[first:b]
+            if left >= right or kind == 'insert':
+                continue
+            if left == c and right == d:
+                yield saved[a:b]
+            elif kind == 'replace' and depth < 2:
+                key = (depth, block)
+                if key not in detailed_blocks:
+                    before, after = saved[a:b], current[c:d]
+                    if depth == 0:
+                        before, after = SAVED_SELECTION_TOKEN.findall(before), SAVED_SELECTION_TOKEN.findall(after)
+                    detailed_blocks[key] = selection_diff_blocks(before, after, a, c,
+                        autojunk=len(before) * len(after) > 1000000)
+                yield from project(start, end, detailed_blocks[key], depth + 1)
+            else:
+                # Matching text maps one-to-one. Inside an unmatched replacement,
+                # project partial boundaries monotonically onto its saved span.
+                first = a + (left - c) * (b - a) // (d - c)
+                last = a + (right - c) * (b - a) // (d - c)
+                yield saved[first:last]
+
+    return ''.join(part for start, end in ranges for part in project(start, end, blocks))
+
+
 class FileDiffSavedCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
+        view = self.view
+        file_name = view.file_name()
+        with open(file_name, encoding='utf-8') as saved_file:
+            saved = saved_file.read()
+        current = self.diff_content(view, use_selection=False)
+        selections = [region for region in view.sel() if not region.empty()]
+        from_name, to_name = file_name, file_name + ' (Unsaved)'
+        revision = view.change_count()
+        reverse = kwargs.get('reverse', False)
+
+        if selections:
+            ranges = [(region.begin(), region.end()) for region in selections]
+            saved = saved_selection_text(saved, current, ranges)
+            current = ''.join(current[start:end] for start, end in ranges)
+            from_name, to_name = file_name + ' (Saved selection)', file_name + ' (Unsaved selection)'
+            kwargs['force_temp_files'] = True
+            kwargs['saved_selection'] = True
+
         def on_post_diff_tool(from_file, to_file):
-            self.update_view(self.view, edit, to_file)
+            edited_file = from_file if reverse else to_file
+            if edited_file and view.is_valid() and view.change_count() == revision:
+                self.update_view(view, edited_file, selections=selections)
 
         kwargs.update({'post_diff_tool': on_post_diff_tool})
-        self.run_diff(self.read_file(self.view.file_name()), self.diff_content(self.view),
-            from_file=self.view.file_name(),
-            to_file=self.view.file_name() + ' (Unsaved)',
-            **kwargs)
+        self.run_diff(saved, current, from_file=from_name, to_file=to_name, **kwargs)
 
     def is_visible(self):
         if not get_setting('show_context_menu', True):
             return False
         return bool(self.view.file_name()) and self.view.is_dirty()
+
+    def description(self):
+        return saved_diff_caption(self.view)
 
 
 class FileDiffFileCommand(FileDiffCommand):
@@ -437,102 +554,297 @@ class FileDiffFileCommand(FileDiffCommand):
         return get_setting('show_context_menu', True)
 
 
+def open_tab_details(view, full_path, preview_lines):
+    path = view.file_name()
+    if path:
+        location = path if full_path else os.path.dirname(path)
+        home = os.path.expanduser('~')
+        if not full_path and (location == home or location.startswith(home + os.sep)):
+            location = '~' + location[len(home):]
+        return [escape(location)]
+    if preview_lines == 0:
+        return []
+    if view.is_loading():
+        return ['Loading…']
+
+    preview = view.substr(sublime.Region(0, min(view.size(), 4096)))
+    details = []
+    for line in preview.splitlines():
+        line = ' '.join(line.split())
+        if line:
+            details.append(escape(line[:83] + '…' if len(line) > 84 else line))
+            if len(details) == preview_lines:
+                break
+    return details or ['Empty buffer' if not view.size() else 'No text preview']
+
+
 class FileDiffTabCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        my_id = self.view.id()
-        files = []
-        contents = []
-        views = []
-        untitled_count = 1
-        for v in self.view.window().views():
-            if v.id() != my_id:
-                this_content = v.substr(sublime.Region(0, v.size()))
-                if v.file_name():
-                    files.append(v.file_name())
-                elif v.name():
-                    files.append(v.name())
-                else:
-                    files.append('untitled %d' % untitled_count)
-                    untitled_count += 1
+        source = self.view
+        window = source.window()
+        if window is None:
+            return
+        targets = [(view, view.name() or os.path.basename(view.file_name() or ''))
+                   for view in window.views() if view.is_valid() and view.id() != source.id()]
+        if not targets:
+            return
 
-                contents.append(this_content)
-                views.append(v)
+        untitled_count = 1
+        for index, (view, title) in enumerate(targets):
+            if not title:
+                targets[index] = (view, 'Untitled {}'.format(untitled_count))
+                untitled_count += 1
+
+        selections = [region for region in source.sel() if not region.empty()]
+        source_revision = source.change_count()
+        reverse = kwargs.get('reverse', False)
 
         def on_done(index):
-            if index > -1:
-                def on_post_diff_tool(from_file, to_file):
-                    self.update_view(self.view, edit, from_file)
-                    self.update_view(views[index], edit, to_file)
+            if index < 0:
+                return
+            target, title = targets[index]
+            if not source.is_valid() or not target.is_valid():
+                sublime.status_message('FileDiffs: A comparison tab was closed')
+                return
+            if source.is_loading() or target.is_loading():
+                sublime.status_message('FileDiffs: A tab is still loading')
+                return
+            if source.change_count() != source_revision:
+                sublime.status_message('FileDiffs: The source tab changed')
+                return
 
-                kwargs.update({'post_diff_tool': on_post_diff_tool})
-                self.run_diff(self.diff_content(self.view), contents[index],
-                    from_file=self.view.file_name(),
-                    to_file=files[index],
-                    **kwargs)
+            target_revision = target.change_count()
+            source_text = ''.join(source.substr(region) for region in selections) if selections else self.diff_content(source, use_selection=False)
 
-        if len(files) == 1:
+            def on_post_diff_tool(from_file, to_file):
+                source_file, target_file = (to_file, from_file) if reverse else (from_file, to_file)
+                if source.is_valid() and source.change_count() == source_revision:
+                    self.update_view(source, source_file, selections=selections)
+                if target.is_valid() and target.change_count() == target_revision:
+                    self.update_view(target, target_file, use_selection=False)
+
+            kwargs['post_diff_tool'] = on_post_diff_tool
+            if selections:
+                kwargs['force_temp_files'] = True
+            self.run_diff(source_text, self.diff_content(target, use_selection=False),
+                from_file=self.get_file_name(source, 'Untitled'),
+                to_file=target.file_name() or title,
+                **kwargs)
+
+        if len(targets) == 1:
             on_done(0)
         else:
-            if get_setting('expand_full_file_name_in_tab', False):
-                menu_items = [[os.path.basename(f),f] for f in files]
+            full_path = get_setting('expand_full_file_name_in_tab', False)
+            preview_lines = get_setting('open_tab_preview_lines', 1)
+            if type(preview_lines) is not int or preview_lines < 0:
+                preview_lines = 1
+            rows = [(title, open_tab_details(view, full_path, preview_lines)) for view, title in targets]
+            if hasattr(sublime, 'QuickPanelItem'):
+                items = [sublime.QuickPanelItem(title, details=details) for title, details in rows]
             else:
-                menu_items = [os.path.basename(f) for f in files]
-            sublime.set_timeout(lambda: self.view.window().show_quick_panel(menu_items, on_done), 1)
+                items = [[title] + details for title, details in rows]
+            panel_options = {}
+            if int(sublime.version()) >= 4081:
+                panel_options['placeholder'] = ('Compare selection with an open tab' if selections
+                                                else 'Compare with an open tab')
+            sublime.set_timeout(lambda: window.show_quick_panel(items, on_done, **panel_options), 1)
 
     def is_visible(self):
         if not get_setting('show_context_menu', True):
             return False
-        return len(self.view.window().views()) > 1
+        window = self.view.window()
+        return window is not None and len(window.views()) > 1
 
 
-previous_view = current_view = None
+tab_history = {}
 do_not_record = False
-scratches = set()
 
 class FileDiffPreviousCommand(FileDiffCommand):
     def run(self, edit, **kwargs):
-        if previous_view:
-            def on_post_diff_tool(from_file, to_file):
-                self.update_view(previous_view, edit, from_file)
-                self.update_view(current_view, edit, to_file)
+        current = self.view
+        previous = previous_tab(current)
+        record_current_view(current)
+        if previous is None:
+            sublime.status_message('FileDiffs: No previous tab in this window')
+            return
+        if current.is_loading() or previous.is_loading():
+            sublime.status_message('FileDiffs: A tab is still loading')
+            return
 
-            kwargs.update({'post_diff_tool': on_post_diff_tool})
-            self.run_diff(self.diff_content(previous_view), self.diff_content(self.view),
-                from_file=self.get_file_name(previous_view, 'untitled (Previous)'),
-                to_file=self.get_file_name(self.view, 'untitled (Current)'),
-                **kwargs)
+        use_selection = use_previous_selections(previous, current)
+
+        def on_post_diff_tool(from_file, to_file):
+            if previous.is_valid():
+                self.update_view(previous, from_file, use_selection)
+            if current.is_valid():
+                self.update_view(current, to_file, use_selection)
+
+        kwargs.update({'post_diff_tool': on_post_diff_tool})
+        self.run_diff(self.diff_content(previous, use_selection), self.diff_content(current, use_selection),
+            from_file=self.get_file_name(previous, 'untitled (Previous)'),
+            to_file=self.get_file_name(current, 'untitled (Current)'),
+            **kwargs)
 
     def is_visible(self):
-        if not get_setting('show_context_menu', True):
-            return False
-        return previous_view is not None
+        return get_setting('show_context_menu', True)
+
+    def is_enabled(self):
+        return previous_tab(self.view) is not None
+
+    def description(self):
+        return previous_diff_caption(self.view)
+
+
+def has_selection(view):
+    return any(not region.empty() for region in view.sel())
+
+
+def use_previous_selections(previous, current):
+    return not get_setting('ignore_unpaired_selection', False) or has_selection(previous) == has_selection(current)
+
+
+def selection_diff_caption(view, caption, other, reverse=False):
+    if not get_setting('show_diff_menu_details', False) or not has_selection(view):
+        return caption
+    left, right = ('selection', other) if reverse else (other, 'selection')
+    return '{} · {} → {}'.format(caption, left, right)
+
+
+def clipboard_diff_caption(view):
+    return selection_diff_caption(view, 'Diff with Clipboard', 'clipboard', get_setting('reverse_clipboard', False))
+
+
+def saved_diff_caption(view):
+    return selection_diff_caption(view, 'Diff with Saved', 'saved selection')
+
+
+def compact_tab_label(label, suffix=''):
+    # Preserve the start of the label and the end of the filename.
+    limit = 36 - len(suffix)
+    if len(label) > limit:
+        start = limit // 2
+        end = limit - start - 1
+        label = label[:start] + '…' + label[-end:]
+    return label + suffix
+
+
+def previous_tab_labels(tabs):
+    paths = [tab.file_name() for tab in tabs]
+    labels = [os.path.basename(path) if path else tab.name() or 'Untitled'
+              for tab, path in zip(tabs, paths)]
+    if labels[0] == labels[1]:
+        separator = os.path.sep
+        components = [os.path.normpath(path).split(separator) if path else [] for path in paths]
+        if all(paths):
+            left, right = components
+            # Start at the filename and stop at the first differing directory.
+            for depth in range(2, max(len(left), len(right)) + 1):
+                if left[-depth:] != right[-depth:]:
+                    labels = [separator.join(parts[-depth:]) for parts in components]
+                    break
+        elif any(paths):
+            index = 0 if paths[0] else 1
+            labels[index] = separator.join(components[index][-2:])
+
+    labels = [compact_tab_label(label) for label in labels]
+    if labels[0] == labels[1]:
+        window = tabs[1].window()
+        for index, tab in enumerate(tabs):
+            group, position = window.get_view_index(tab)
+            location = ' (group {}, tab {})'.format(group + 1, position + 1)
+            labels[index] = compact_tab_label(labels[index], location)
+    return labels
+
+
+def previous_diff_caption(view):
+    if not get_setting('show_diff_menu_details', False):
+        return 'Diff with Previous'
+    previous = previous_tab(view)
+    if previous is None:
+        return 'Diff with Previous · no previous tab'
+
+    pair = (previous, view)
+    use_selection = use_previous_selections(*pair)
+    labels = previous_tab_labels(pair)
+
+    for index, tab in enumerate(pair):
+        if tab.is_loading():
+            labels[index] += ' (loading)'
+        elif use_selection and has_selection(tab):
+            labels[index] += ' (selection)'
+        elif tab.size() == 0:
+            labels[index] += ' (empty)'
+    caption = 'Diff with Previous · {} → {}'.format(*labels)
+    return caption if use_selection else caption + ' (whole files)'
+
+
+def editor_tabs(window):
+    return {view.id(): view for view in window.views()
+            if view.is_valid() and not view.settings().get('filediffs_result')}
+
+
+def previous_tab(view):
+    window = view.window()
+    if window is None:
+        return None
+    tabs = editor_tabs(window)
+    current_id = view.id()
+    if current_id not in tabs:
+        return None
+    for tab_id in tab_history.get(window.id(), ()):
+        if tab_id != current_id and tab_id in tabs:
+            return tabs[tab_id]
+    # Immediately after loading the plugin, the only other tab is unambiguous.
+    if len(tabs) == 2:
+        return next(tab for tab_id, tab in tabs.items() if tab_id != current_id)
+    return None
+
 
 def record_current_view(view):
-    if do_not_record:
+    if do_not_record or view is None:
         return
-    settings = view.settings()
-    if view.id() in scratches:
+    window = view.window()
+    if window is None:
         return
-    global previous_view
-    global current_view
-    previous_view = current_view
-    current_view = view
+    window_id = window.id()
+    view_id = view.id()
+    history = tab_history.get(window_id, [])
+    if history and history[0] == view_id:
+        return
+    tabs = editor_tabs(window)
+    if view_id in tabs:
+        tab_history[window_id] = [view_id] + [tab_id for tab_id in history if tab_id != view_id and tab_id in tabs]
+
+
+def plugin_loaded():
+    for window in sublime.windows():
+        record_current_view(window.active_view())
+
 
 class FileDiffListener(sublime_plugin.EventListener):
     def on_activated(self, view):
-        try:
-            # Prevent 'show_quick_panel()' of 'FileDiffs Menu' from being recorded
-            viewids = [v.id() for v in view.window().views()]
-            if view.id() not in viewids:
-                return
-            if current_view is None or view.id() != current_view.id():
-                record_current_view(view)
-        except AttributeError:
-            pass
+        record_current_view(view)
+
+    def on_deactivated(self, view):
+        window = view.window()
+        active = window.active_view() if window is not None else None
+        if active is not None and active.id() == view.id():
+            record_current_view(view)
+
+    def on_window_command(self, window, command, args):
+        record_current_view(window.active_view())
+
+    def on_post_window_command(self, window, command, args):
+        record_current_view(window.active_view())
 
     def on_close(self, view):
-        if view.id() in scratches:
-            scratches.remove(view.id())
+        view_id = view.id()
+        for history in tab_history.values():
+            if view_id in history:
+                history.remove(view_id)
+
+    def on_pre_close_window(self, window):
+        tab_history.pop(window.id(), None)
 
 
 def get_setting(key, default=None):
